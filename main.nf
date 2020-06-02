@@ -235,20 +235,20 @@ process REMOVE_PHIX {
 
     input: 
         file phix
-        tuple sample_id, path(reads1), path(reads2)
+        tuple sample_id, path(r1), path(r2)
 
     //the emit argument allows us to access the output of the process
     //using names in dictionary style in the workflow 
     output: 
-        tuple sample_id, path(reads_out1), path(reads_out2), 
+        tuple sample_id, path(r1_out), path(r2_out), 
                 emit: 'reads'
         tuple sample_id, path(stats), 
                 emit: 'stats'
    
     //values used as script args
     script:
-    reads_out1 = "${sample_id}_1.phix_removed.fastq.gz"
-    reads_out2 = "${sample_id}_2.phix_removed.fastq.qz"
+    r1_out = "${sample_id}_1.phix_removed.fastq.gz"
+    r2_out = "${sample_id}_2.phix_removed.fastq.qz"
     stats = "${sample_id}-remove_phix-stats.txt"
 
     /*
@@ -273,8 +273,8 @@ process REMOVE_PHIX {
     """
     bbduk \\
         -Xmx${task.memory.toMega()}m \\
-        in1=$reads1 in2=$reads2 \\
-        out1=$reads_out1 out2=$reads_out2 \\
+        in1=$r1 in2=$r2 \\
+        out1=$r1_out out2=$r2_out \\
         ref=$phix k=31 hdist=1 \\
         stats=$stats
     """
@@ -301,21 +301,21 @@ process FASTP {
         tuple sample_id, path(r1), path(r2)
         
     output: 
-        tuple sample_id, path(reads_out1), path(reads_out2), 
+        tuple sample_id, path(r1_out), path(r2_out), 
                 emit: 'reads'
         tuple sample_id, path(html_report), path(json_report), 
                 emit: 'report'
                 
     script:
-        reads_out1 = "${sample_id}_1.fastp.fastq.gz"
-        reads_out2 = "${sample_id}_2.fastp.fastq.gz"
+        r1_out = "${sample_id}_1.fastp.fastq.gz"
+        r2_out = "${sample_id}_2.fastp.fastq.gz"
         json_report = "fastp-report-${sample_id}.json"
         html_report = "fastp-report-${sample_id}.html"
         
     """
     fastp \\
         -i $r1 -I $r2 \\
-        -o $reads_out1 -O $reads_out2 \\
+        -o $r1_out -O $r2_out \\
         -p -c -R "$sample_id fastp report" \\
         -w ${task.cpus} \\
         -q ${params.fastp_min_base_quality} \\
@@ -341,14 +341,14 @@ process FASTQC {
                 }
 
     input: 
-        tuple val(sample_id), path(reads1), path(reads2)
+        tuple val(sample_id), path(r1), path(r2)
 
     output:
         file "*_fastqc.{zip,html}"
     
     script:
     """
-    fastqc -q $reads1 $reads2
+    fastqc -q $r1 $r2
     """
 }
 //*****************************************************************************
@@ -361,26 +361,47 @@ process FASTQC {
 
 process BWA {
     tag "$sample_id"
+    publishDir "${params.outdir}/align/bwa", 
+                pattern: "*.sam", mode: 'copy'                
 
     input:
-        tuple val(sample_id), path(reads1), path(reads2), val(length)
-
+        file ref            
+        tuple val(sample_id), path(r1), path(r2)
+    
     output:
-        file "oogaly boogaly"
-
+        tuple val(sample_id), path(r1_out), path(r2_out),
+                emit: 'align'
+    
     script:
-        reads1_out = 
-        reads2_out =         
-       
-        
+        r1_unzip = "${sample_id}_1.fastp.fastq"
+        r2_unzip = "${sample_id}_2.fastp.fastq"
+        r1_out = "${sample_id}_1_align.sam"
+        r2_out = "${sample_id}_2_align.sam"
+        align = "${sample_id}_aln-pe.sam"
+
     """
-    bwa 
+    gzip -d --force $r1 > r1_unzip;
+    gzip -d --force $r2 > r2_unzip;
+    bwa index $ref;
+    bwa aln $ref $r1_unzip > $r1_out; 
+    bwa aln $ref $r2_unzip > $r2_out;
+    bwa sampe $ref $r2_out $r2_out $r1_unzip $r2_unzip > aln-pe.sam
     """
 }
 
 //*****************************************************************************
 
+//*****************************************************************************
+// PROCESSES: SAMTOBAM
+// Convert files from SAM to BAM format  
+// Prepares output from BWA to become input for Freebayes
+//*****************************************************************************
 
+
+
+
+
+//*****************************************************************************
 
 //=============================================================================
 // WORKFLOW DEFINITION 
@@ -407,5 +428,6 @@ workflow {
 
     align_ref = Channel.value(file("${baseDir}/data/ref.fa"))
 
-
+    BWA(align_ref, FASTP.out.reads)
+    
 }
