@@ -362,6 +362,8 @@ process FASTQC {
 process BWA {
     tag "$sample_id"
     publishDir "${params.outdir}/align/bwa", 
+                pattern: "*.sai", mode: 'copy'
+    publishDir "${params.outdir}/align/bwa",
                 pattern: "*.sam", mode: 'copy'                
 
     input:
@@ -369,23 +371,24 @@ process BWA {
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        tuple val(sample_id), path(r1_out), path(r2_out),
+        file "${sample_id}_align_pe.sam"
+        tuple val(sample_id), path(r1_unzip), path(r2_unzip),
                 emit: 'align'
     
     script:
         r1_unzip = "${sample_id}_1.fastp.fastq"
         r2_unzip = "${sample_id}_2.fastp.fastq"
-        r1_out = "${sample_id}_1_align.sam"
-        r2_out = "${sample_id}_2_align.sam"
-        align = "${sample_id}_aln-pe.sam"
+        r1_sai = "${sample_id}_1.sai"
+        r2_sai = "${sample_id}_2.sai"
+        align = "${sample_id}_align_pe.sam"
 
     """
-    gzip -d --force $r1 > r1_unzip;
-    gzip -d --force $r2 > r2_unzip;
+    gzip -d --force $r1 > $r1_unzip;
+    gzip -d --force $r2 > $r2_unzip;
     bwa index $ref;
-    bwa aln $ref $r1_unzip > $r1_out; 
-    bwa aln $ref $r2_unzip > $r2_out;
-    bwa sampe $ref $r2_out $r2_out $r1_unzip $r2_unzip > $align
+    bwa aln $ref $r1_unzip > $r1_sai;
+    bwa aln $ref $r2_unzip > $r2_sai;
+    bwa sampe $ref $r2_sai $r2_sai $r1_unzip $r2_unzip > $align;
     """
 }
 
@@ -425,7 +428,7 @@ process SAMTOBAM {
 
 workflow {
     // Create channel for paired end reads
-    
+    println("workflow") 
     //obtain read files from specified location 
     ch_reads = Channel.fromFilePairs(
         params.reads,
@@ -440,10 +443,13 @@ workflow {
     
     REMOVE_PHIX(ch_phix, ch_reads)
     FASTP(REMOVE_PHIX.out.reads)
+    println("REMOVE PHIX")
+    println("${REMOVE_PHIX.out.reads}")
     fastqc_reports = FASTQC(FASTP.out.reads)
 
     align_ref = Channel.value(file("${baseDir}/data/ref.fa"))
 
     BWA(align_ref, FASTP.out.reads)
-    println("${BWA.out.align}") 
+    println("BWA")
+    println(BWA.out.align) 
 }
