@@ -555,7 +555,7 @@ process BAMSORT {
         sorted_bam = "${sample_id}_align_pe.sorted.bam"
 
     """
-    samtools sort $align -o $sorted_bam
+    samtools sort $align -o $sorted_bam -O bam
     """
 }
 
@@ -569,17 +569,17 @@ process BAMSORT {
 process BAMINDEX {
     tag "$sample_id"
     publishDir "${params.outdir}/samconvert",
-                pattern: "*.index", mode: "copy"
+                pattern: "*.bai", mode: "copy"
 
     input: 
         tuple val(sample_id), path(align)
 
     output:
-        tuple val(sample_id), path(indexed_bam), 
+        tuple val(sample_id),  path(align),
                 emit: 'align'
     
     script: 
-        indexed_bam = "${sample_id}_align_pe.index"
+        indexed_bam = "${sample_id}_align_pe.bai"
 
     """
     samtools index $align $indexed_bam
@@ -587,6 +587,56 @@ process BAMINDEX {
 }
 
 //*****************************************************************************
+
+//*****************************************************************************
+// PROCESSES: FREEBAYES
+// Variant Calling 
+// Freebayes is the default variant caller  
+//*****************************************************************************
+
+process FREEBAYES {
+    tag "$sample_id"
+    publishDir "${params.outdir}/variant/freebayes",
+                pattern: "*.vcf", mode: "copy"
+
+    input: 
+        file ref
+        tuple val(sample_id), path(bam)
+
+    output:
+        tuple val(sample_id), path(bam), path(variant), 
+                emit: 'variant'
+    
+    script: 
+        variant = "${sample_id}_var.vcf"
+
+    """
+    freebayes -f $ref $bam > $variant
+    """
+}
+
+//*****************************************************************************
+
+//*****************************************************************************
+// PROCESSES: BCFTOOLS
+// Filtering variant calls 
+//*****************************************************************************
+
+process BCFTOOLS {
+    tag "$sample_id"
+
+    input: 
+
+    output:
+    
+    script: 
+
+    """
+    """
+}
+
+//*****************************************************************************
+
 
 //=============================================================================
 // WORKFLOW DEFINITION 
@@ -621,5 +671,5 @@ workflow {
     BAMINDEX(BAMSORT.out.align)
 
     //freebayes process
-
+    FREEBAYES(align_ref, BAMINDEX.out.align)
 }
