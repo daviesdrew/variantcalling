@@ -384,15 +384,14 @@ process UNZIP {
 
 //*****************************************************************************
 // PROCESSES: BWAINDEX 
-// Build the reference genome index
-//*****************************************************************************
+/// Build the reference genome index
+/*****************************************************************************
 
 process BWAINDEX {
     tag "$sample_id"
     publishDir "${params.outdir}/align/bwa", 
                 pattern: "*.sai", mode: 'copy'
-    publishDir "${params.outdir}/align/bwa/index",
-                pattern: "ref.fa.*", mode: 'copy'
+
     input:
         file ref            
         tuple val(sample_id), path(r1), path(r2)
@@ -432,8 +431,7 @@ process BWA {
         tuple val(sample_id), path(r1), path(r2), path(r1_sai), path(r2_sai)
     
     output:
-        tuple val(sample_id), path(align),
-                emit: 'align'
+        file "${sample_id}_align_pe.sam"
         tuple val(sample_id), path(r1), path(r2),
                 emit: 'reads'
     
@@ -441,7 +439,6 @@ process BWA {
         align = "${sample_id}_align_pe.sam"
 
     """
-    bwa index $ref;
     bwa sampe $ref $r2_sai $r2_sai $r1 $r2 > $align;
     """
 }
@@ -514,75 +511,22 @@ process BOWTIE2 {
 
 process SAMTOBAM {
     tag "$sample_id"
-    publishDir "${params.outdir}/samconvert",
+    publishDir "${params.outdir}/align/bwa",
                 pattern: "*.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align)
+        tuple val(sample_id), path(r1), path(r2)
 
     output:
-        tuple val(sample_id), path(align_bam), 
-                emit: 'align'
-        
+        tuple val(sample_id), path(r1_out), path(r2_out)
+
     script: 
-        align_bam = "${sample_id}_align_pe.bam"
+        r1_out = "${sample_id}_1.bam"
+        r2_out = "${sample_id}_2.bam"
 
     """
-    samtools view -S -b $align > $align_bam;
-    """
-}
+    samtools view -S -b $r1
 
-//*****************************************************************************
-
-//*****************************************************************************
-// PROCESSES: BAMSORT
-// Sort Bam file  
-//*****************************************************************************
-
-process BAMSORT {
-    tag "$sample_id"
-    publishDir "${params.outdir}/samconvert",
-                pattern: "*.sorted.bam", mode: "copy"
-
-    input: 
-        tuple val(sample_id), path(align)
-
-    output:
-        tuple val(sample_id), path(sorted_bam), 
-                emit: 'align'
-    
-    script: 
-        sorted_bam = "${sample_id}_align_pe.sorted.bam"
-
-    """
-    samtools sort $align -o $sorted_bam
-    """
-}
-
-//*****************************************************************************
-
-//*****************************************************************************
-// PROCESSES: BAMINDEX
-// Index sorted Bam file  
-//*****************************************************************************
-
-process BAMINDEX {
-    tag "$sample_id"
-    publishDir "${params.outdir}/samconvert",
-                pattern: "*.index", mode: "copy"
-
-    input: 
-        tuple val(sample_id), path(align)
-
-    output:
-        tuple val(sample_id), path(indexed_bam), 
-                emit: 'align'
-    
-    script: 
-        indexed_bam = "${sample_id}_align_pe.index"
-
-    """
-    samtools index $align $indexed_bam
     """
 }
 
@@ -610,16 +554,12 @@ workflow {
     REMOVE_PHIX(ch_phix, ch_reads)
     FASTP(REMOVE_PHIX.out.reads)
     fastqc_reports = FASTQC(FASTP.out.reads)
-    
     align_ref = Channel.value(file("${baseDir}/data/ref.fa"))
     UNZIP(FASTP.out.reads)
     BWAINDEX(align_ref, UNZIP.out.reads)
     BWA(align_ref, BWAINDEX.out.reads)
 
-    SAMTOBAM(BWA.out.align)
-    BAMSORT(SAMTOBAM.out.align)
-    BAMINDEX(BAMSORT.out.align)
 
-    //freebayes process
+
 
 }
