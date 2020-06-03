@@ -385,7 +385,7 @@ process BWA {
     bwa index $ref;
     bwa aln $ref $r1_unzip > $r1_out; 
     bwa aln $ref $r2_unzip > $r2_out;
-    bwa sampe $ref $r2_out $r2_out $r1_unzip $r2_unzip > aln-pe.sam
+    bwa sampe $ref $r2_out $r2_out $r1_unzip $r2_unzip > $align
     """
 }
 
@@ -397,9 +397,25 @@ process BWA {
 // Prepares output from BWA to become input for Freebayes
 //*****************************************************************************
 
+process SAMTOBAM {
+    tag "$sample_id"
+    publishDir "${params.outdir}/align/bwa",
+                pattern: "*.bam", mode: "copy"
 
+    input: 
+        tuple val(sample_id), path(r1), path(r2)
 
+    output:
+        tuple val(sample_id), path(r1_out), path(r2_out)
 
+    script: 
+        r1_out = "${sample_id}_1.bam"
+        r2_out = "${sample_id}_2.bam"
+
+    """
+    samtools view -S -b $r1
+    """
+}
 
 //*****************************************************************************
 
@@ -429,5 +445,5 @@ workflow {
     align_ref = Channel.value(file("${baseDir}/data/ref.fa"))
 
     BWA(align_ref, FASTP.out.reads)
-    
+    println("${BWA.out.align}") 
 }
