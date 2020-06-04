@@ -597,14 +597,14 @@ process BAMINDEX {
 process FREEBAYES {
     tag "$sample_id"
     publishDir "${params.outdir}/variant/freebayes",
-                pattern: "*.vcf", mode: "copy"
+                pattern: "*.vcf", mode: 'copy'
 
     input: 
         file ref
         tuple val(sample_id), path(bam)
 
     output:
-        tuple val(sample_id), path(bam), path(variant), 
+        tuple val(sample_id), path(variant), 
                 emit: 'variant'
     
     script: 
@@ -618,25 +618,58 @@ process FREEBAYES {
 //*****************************************************************************
 
 //*****************************************************************************
-// PROCESSES: BCFTOOLS
-// Filtering variant calls 
+// PROCESSES: BCFTOOLS_STATS
+// Collect stats from variant calls 
 //*****************************************************************************
 
-process BCFTOOLS {
+process BCFTOOLS_STATS {
     tag "$sample_id"
+    publishDir "${params.outdir}/variant",
+                pattern: "*_stats.txt", mode: 'copy'
 
     input: 
+        tuple val(sample_id), path(variant)
 
     output:
-    
+        file "${sample_id}_stats.txt"
+            
     script: 
+        stats = "${sample_id}_stats.txt"
 
     """
+    bcftools stats $variant > $stats; 
+    
     """
 }
 
 //*****************************************************************************
 
+//*****************************************************************************
+// PROCESSES: BCFTOOLS_FILTER
+// Filtering variant calls 
+//*****************************************************************************
+
+process BCFTOOLS_FILTER {
+    tag "$sample_id"
+    publishDir "${params.outdir}/variant",
+                pattern: "*_filtered.vcf", mode: 'copy'
+
+    input: 
+        tuple val(sample_id), path(variant)
+
+    output:
+        file "${sample_id}_filtered.vcf"
+            
+    script: 
+        filtered = "${sample_id}_filtered.vcf"
+
+    """
+    bcftools stats $variant > $filtered; 
+    
+    """
+}
+
+//*****************************************************************************
 
 //=============================================================================
 // WORKFLOW DEFINITION 
@@ -663,13 +696,25 @@ workflow {
     
     align_ref = Channel.value(file("${baseDir}/data/ref.fa"))
     UNZIP(FASTP.out.reads)
+    
     BWAINDEX(align_ref, UNZIP.out.reads)
     BWA(align_ref, BWAINDEX.out.reads)
 
+    //BOWTIE2INDEX(align_ref, FASTP.out.reads)
+    //BOWTIE2(align_ref, BOWTIE2INDEX.out.reads)
+    
+    //SAMTOBAM(BOWTIE2.out.align)
+    //BAMSORT(SAMTOBAM.out.align_bowtie2)
+    //BAMINDEX(BAMSORT.out.align_bowtie2)
+      
     SAMTOBAM(BWA.out.align)
     BAMSORT(SAMTOBAM.out.align)
     BAMINDEX(BAMSORT.out.align)
-
+    
     //freebayes process
     FREEBAYES(align_ref, BAMINDEX.out.align)
+    BCFTOOLS_STATS(FREEBAYES.out.variant)
+    BCFTOOLS_FILTER(FREEBAYES.out.variant)
+
+
 }
