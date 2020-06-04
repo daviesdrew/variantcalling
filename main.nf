@@ -507,6 +507,64 @@ process BOWTIE2 {
 //*****************************************************************************
 
 //*****************************************************************************
+// PROCESSES: MINIMAP2INDEX 
+// Build the reference genome index
+//*****************************************************************************
+
+process MINIMAP2INDEX {
+    tag "$sample_id"
+    publishDir "/tmp/align/bowtie2/index",
+                pattern: "*.bt2", mode: 'copy', 
+                saveAs: { filename -> filename }
+
+    input:
+        file ref
+        tuple val(sample_id), path(r1), path(r2)
+
+    output:
+        file "index.*.bt2"
+        tuple val(sample_id), path(r1), path(r2)
+
+    script:
+        indexes = "/tmp/align/bowtie2/index"
+
+    """
+    bowtie2-build $ref $indexes
+    """
+}
+
+//*****************************************************************************
+
+//*****************************************************************************
+// PROCESSES: MINIMAP2 
+// Paired End read alignment 
+// Utilizes reference genome
+//*****************************************************************************
+
+process MINIMAP2 {
+    tag "$sample_id"
+    publishDir "${params.outdir}/align/bowtie2",
+                pattern: "*.sam", mode: 'copy'
+
+    input:
+        file ref            
+        tuple val(sample_id), path(r1), path(r2)
+    
+    output:
+        tuple val(sample_id), path(r1_unzip), path(r2_unzip),
+                emit: 'align'
+    
+    script:
+        align = "${sample_id}_align_pe.sam"
+
+    """
+    bowtie2 -x $indexes -1 $r1 -2 $r2 > $align;
+    """
+}
+
+//*****************************************************************************
+
+//*****************************************************************************
 // PROCESSES: SAMTOBAM
 // Convert files from SAM to BAM format  
 // Prepares output from BWA to become input for Freebayes
