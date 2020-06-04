@@ -424,7 +424,7 @@ process BWAINDEX {
 
 process BWA {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/bwa",
+    publishDir "${params.outdir}/align/alignment",
                 pattern: "*.sam", mode: 'copy'
 
     input:
@@ -438,7 +438,7 @@ process BWA {
                 emit: 'reads'
     
     script:
-        align = "${sample_id}_align_pe.sam"
+        align = "${sample_id}_bwa_align_pe.sam"
 
     """
     bwa index $ref;
@@ -455,23 +455,24 @@ process BWA {
 
 process BOWTIE2INDEX {
     tag "$sample_id"
-    publishDir "/tmp/align/bowtie2/index",
-                pattern: "*.bt2", mode: 'copy', 
-                saveAs: { filename -> filename }
+    publishDir "./index", pattern: "index*bt2*", mode: "copy"
 
     input:
         file ref
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        file "index.*.bt2"
-        tuple val(sample_id), path(r1), path(r2)
+        tuple val(sample_id), path(r1), path(r2), path(index_dir),
+                emit: 'reads'
 
     script:
-        indexes = "/tmp/align/bowtie2/index"
+        index_dir = "./index"
+        indexes = "./index/index"
 
     """
-    bowtie2-build $ref $indexes
+    sudo mkdir $index_dir;
+    sudo chmod 777 $index_dir;
+    bowtie2-build $ref $indexes;
     """
 }
 
@@ -485,15 +486,15 @@ process BOWTIE2INDEX {
 
 process BOWTIE2 {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/bowtie2",
+    publishDir "${params.outdir}/align/alignment",
                 pattern: "*.sam", mode: 'copy'
 
     input:
         file ref            
-        tuple val(sample_id), path(r1), path(r2)
+        tuple val(sample_id), path(r1), path(r2), path(indexes)
     
     output:
-        tuple val(sample_id), path(r1_unzip), path(r2_unzip),
+        tuple val(sample_id), path(r1), path(r2), path(align),
                 emit: 'align'
     
     script:
@@ -543,7 +544,7 @@ process MINIMAP2INDEX {
 
 process MINIMAP2 {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/bowtie2",
+    publishDir "${params.outdir}/align/alignment",
                 pattern: "*.sam", mode: 'copy'
 
     input:
@@ -758,13 +759,20 @@ workflow {
     BWAINDEX(align_ref, UNZIP.out.reads)
     BWA(align_ref, BWAINDEX.out.reads)
 
-    //BOWTIE2INDEX(align_ref, FASTP.out.reads)
-    //BOWTIE2(align_ref, BOWTIE2INDEX.out.reads)
+    BOWTIE2INDEX(align_ref, UNZIP.out.reads)
+    BOWTIE2(align_ref, BOWTIE2INDEX.out.reads)
     
     //SAMTOBAM(BOWTIE2.out.align)
-    //BAMSORT(SAMTOBAM.out.align_bowtie2)
-    //BAMINDEX(BAMSORT.out.align_bowtie2)
-      
+    //BAMSORT(SAMTOBAM.out.align)
+    //BAMINDEX(BAMSORT.out.align)
+    
+    //MINIMAP2INDEX(align_ref, FASTP.out.reads)
+    //MINIMAP2(align_ref, MINIMAP2INDEX.out.reads)
+
+    //SAMTOBAM(MINIMAP2.out.align)
+    //BAMSORT(SAMTOBAM.out.align)
+    //BAMINDEX(BAMSORT.out.align)
+     
     SAMTOBAM(BWA.out.align)
     BAMSORT(SAMTOBAM.out.align)
     BAMINDEX(BAMSORT.out.align)
