@@ -462,7 +462,7 @@ process BOWTIE2INDEX {
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        tuple val(sample_id), path(r1), path(r2), path(index_dir),
+        tuple val(sample_id), path(r1), path(r2), val(indexes),
                 emit: 'reads'
 
     script:
@@ -491,7 +491,7 @@ process BOWTIE2 {
 
     input:
         file ref            
-        tuple val(sample_id), path(r1), path(r2), path(indexes)
+        tuple val(sample_id), path(r1), path(r2), val(indexes)
     
     output:
         tuple val(sample_id), path(r1), path(r2), path(align),
