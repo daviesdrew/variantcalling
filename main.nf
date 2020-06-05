@@ -585,7 +585,7 @@ process MINIMAP2 {
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        tuple val(sample_id), path(r1_unzip), path(r2_unzip),
+        tuple val(sample_id), path(r1), path(r2), path(align),
                 emit: 'align'
     
     script:
