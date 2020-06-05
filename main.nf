@@ -593,7 +593,7 @@ process SAMTOBAM {
 
 process BAMSORT {
     tag "$sample_id"
-    publishDir "${params.outdir}/samconvert",
+    publishDir "${params.outdir}/samconvert/${method}",
                 pattern: "*.sorted.bam", mode: "copy"
 
     input: 
@@ -604,7 +604,7 @@ process BAMSORT {
                 emit: 'align'
     
     script: 
-        sorted_bam = "${sample_id}_align_pe.sorted.bam"
+        sorted_bam = "${sample_id}_${method}_align_pe.sorted.bam"
 
     """
     samtools sort $align -o $sorted_bam -O bam
@@ -728,7 +728,6 @@ process BCFTOOLS_FILTER {
 //=============================================================================
 
 workflow {
-    //RESULTDIR()
     // Create channel for paired end reads
     println("workflow") 
     //obtain read files from specified location 
@@ -755,11 +754,13 @@ workflow {
 
     BOWTIE2(align_ref, UNZIP.out.reads)
    
-    //FASTQTOFASTA(UNZIP.out.reads)
-    //MINIMAP2(align_ref, FASTQTOFASTA.out.reads)
+    FASTQTOFASTA(UNZIP.out.reads)
+    MINIMAP2(align_ref, FASTQTOFASTA.out.reads)
     
-    sam_output = Channel.watchPath("${params.outdir}/align/alignment/*.sam",
-                                    'create')
+    sam_output = Channel.watchPath("${params.outdir}/align/alignment/*.sam")
+                        .buffer{ size: 3 }
+                        .view{ "$it" }
+    
     SAMTOBAM(sam_output, BOWTIE2.out.sample_id)
     BAMSORT(SAMTOBAM.out.align)
     BAMINDEX(BAMSORT.out.align)
