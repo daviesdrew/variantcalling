@@ -432,9 +432,9 @@ process BWA {
         tuple val(sample_id), path(r1), path(r2), path(r1_sai), path(r2_sai)
     
     output:
-        tuple val(sample_id), path(align),
-                emit: 'align'
-        tuple val(sample_id), path(r1), path(r2),
+        tuple val(sample_id), val('bwa'),
+                emit: 'sample_id'
+        tuple path(r1), path(r2),
                 emit: 'reads'
     
     script:
@@ -449,7 +449,7 @@ process BWA {
 //*****************************************************************************
 
 //*****************************************************************************
-// PROCESSES: BOWTIE2INDEX 
+// PROCESSES: BOWTIE2 
 // Build the reference genome index
 //*****************************************************************************
 
@@ -463,7 +463,9 @@ process BOWTIE2 {
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        tuple val(sample_id), path(r1), path(r2), path(align),
+        tuple val(sample_id), val('bowtie2'),
+                emit: 'sample_id'
+        tuple path(r1), path(r2), path(align),
                 emit: 'align'
 
     script:
@@ -476,64 +478,6 @@ process BOWTIE2 {
     sudo chmod 777 $index_dir;
     bowtie2-build $ref $indexes;
     bowtie2 -x $indexes -1 $r1 -2 $r2 > $align;
-    """
-}
-
-//*****************************************************************************
-
-//*****************************************************************************
-// PROCESSES: BOWTIE2 
-// Paired End read alignment 
-// Utilizes reference genome
-//*****************************************************************************
-
-process BOWTIE2_DEPRECATED {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/alignment",
-                pattern: "*.sam", mode: 'copy'
-
-    input:
-        file ref            
-        tuple val(sample_id), path(r1), path(r2) //, path(indexes)
-    
-    output:
-        tuple val(sample_id), path(r1), path(r2), path(align),
-                emit: 'align'
-    
-    script:
-        align = "${sample_id}_align_pe.sam"
-
-    """
-    bowtie2 -x './index/index' -1 $r1 -2 $r2 > $align;
-    """
-}
-
-//*****************************************************************************
-
-//*****************************************************************************
-// PROCESSES: MINIMAP2INDEX 
-// Build the reference genome index
-//*****************************************************************************
-
-process MINIMAP2INDEX {
-    tag "$sample_id"
-    publishDir "/tmp/align/bowtie2/index",
-                pattern: "*.bt2", mode: 'copy', 
-                saveAs: { filename -> filename }
-
-    input:
-        file ref
-        tuple val(sample_id), path(r1), path(r2)
-
-    output:
-        file "index.*.bt2"
-        tuple val(sample_id), path(r1), path(r2)
-
-    script:
-        indexes = "/tmp/align/bowtie2/index"
-
-    """
-    bowtie2-build $ref $indexes
     """
 }
 
@@ -585,7 +529,9 @@ process MINIMAP2 {
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        tuple val(sample_id), path(r1), path(r2), path(align),
+        tuple val(sample_id), val('minimap2'),
+                emit: 'sample_id'
+        tuple path(r1), path(r2), path(align),
                 emit: 'align'
     
     script:
@@ -610,14 +556,15 @@ process SAMTOBAM {
                 pattern: "*.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align)
+        tuple val(sample_id), val(method)
+        file align 
 
     output:
         tuple val(sample_id), path(align_bam), 
                 emit: 'align'
         
     script: 
-        align_bam = "${sample_id}_align_pe.bam"
+        align_bam = "${sample_id}_${method}_align_pe.bam"
 
     """
     samtools view -S -b $align > $align_bam;
@@ -797,18 +744,10 @@ workflow {
     FASTQTOFASTA(UNZIP.out.reads)
     MINIMAP2(align_ref, FASTQTOFASTA.out.reads)
      
-    //SAMTOBAM(BOWTIE2.out.align)
-    //BAMSORT(SAMTOBAM.out.align)
-    //BAMINDEX(BAMSORT.out.align)
-    
-    //MINIMAP2INDEX(align_ref, FASTP.out.reads)
-    //MINIMAP2(align_ref, MINIMAP2INDEX.out.reads)
+    sam_output = Channel.watchPath("${params.outdir}/align/alignment/*.sam")
+    sam_output.view{ "value: $it" }
 
-    //SAMTOBAM(MINIMAP2.out.align)
-    //BAMSORT(SAMTOBAM.out.align)
-    //BAMINDEX(BAMSORT.out.align)
-     
-    SAMTOBAM(BWA.out.align)
+    SAMTOBAM(MINIMAP2.out.sample_id, sam_output)
     BAMSORT(SAMTOBAM.out.align)
     BAMINDEX(BAMSORT.out.align)
     
