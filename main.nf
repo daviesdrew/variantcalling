@@ -218,6 +218,25 @@ summary['Config Profile']       = workflow.profile
 //=============================================================================
 
 //*****************************************************************************
+// PROCESSES: RESULTDIR
+//*****************************************************************************
+process RESULTDIR {
+    publishDir "${params.outdir}/align/alignment", 
+                pattern: "*.txt", mode: 'copy'
+     
+    output: 
+        file "readme.txt"
+    
+    script:
+        alignment = "readme.txt"
+    
+    """
+    echo "readme" > $alignment
+    """
+}
+//*****************************************************************************
+
+//*****************************************************************************
 // PROCESSES: REMOVE_PHIX
 // Remove any Coliphage phi-X714 reads using bbduk
 // bbduk and options explained above script call
@@ -432,14 +451,12 @@ process BWA {
         tuple val(sample_id), path(r1), path(r2), path(r1_sai), path(r2_sai)
     
     output:
-        tuple val(sample_id), val('bwa'),
-                emit: 'sample_id'
-        tuple path(r1), path(r2),
-                emit: 'reads'
+        tuple val(sample_id), val('bwa'), val(align),
+                emit: 'align'
     
     script:
         align = "${sample_id}_bwa_align_pe.sam"
-
+    
     """
     bwa index $ref;
     bwa sampe $ref $r2_sai $r2_sai $r1 $r2 > $align;
@@ -463,10 +480,8 @@ process BOWTIE2 {
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val('bowtie2'),
+        tuple val(sample_id), val('bowtie2'), val(align),
                 emit: 'sample_id'
-        tuple path(r1), path(r2), path(align),
-                emit: 'align'
 
     script:
         index_dir = "./index"
@@ -529,9 +544,7 @@ process MINIMAP2 {
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        tuple val(sample_id), val('minimap2'),
-                emit: 'sample_id'
-        tuple path(r1), path(r2), path(align),
+        tuple val(sample_id), val('minimap2'), val(align),  
                 emit: 'align'
     
     script:
@@ -556,18 +569,18 @@ process SAMTOBAM {
                 pattern: "*.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), val(method)
-        file align 
+        tuple val(sample_id), val(method), val(align)
 
     output:
         tuple val(sample_id), path(align_bam), 
                 emit: 'align'
         
     script: 
+        align_path = "${baseDir}/results/align/alignment/${align}"
         align_bam = "${sample_id}_${method}_align_pe.bam"
 
     """
-    samtools view -S -b $align > $align_bam;
+    samtools view -S -b $align_path > $align_bam;
     """
 }
 
@@ -715,6 +728,7 @@ process BCFTOOLS_FILTER {
 //=============================================================================
 
 workflow {
+    //RESULTDIR()
     // Create channel for paired end reads
     println("workflow") 
     //obtain read files from specified location 
@@ -743,18 +757,19 @@ workflow {
    
     FASTQTOFASTA(UNZIP.out.reads)
     MINIMAP2(align_ref, FASTQTOFASTA.out.reads)
-     
-    sam_output = Channel.watchPath("${params.outdir}/align/alignment/*.sam")
+         
+    sam_output = Channel.watchPath("${params.outdir}/align/alignment/*.sam",
+                                    'create')
     sam_output.view{ "value: $it" }
 
-    SAMTOBAM(MINIMAP2.out.sample_id, sam_output)
+    SAMTOBAM(sam_output)
     BAMSORT(SAMTOBAM.out.align)
     BAMINDEX(BAMSORT.out.align)
     
     //freebayes process
-    FREEBAYES(align_ref, BAMINDEX.out.align)
-    BCFTOOLS_STATS(FREEBAYES.out.variant)
-    BCFTOOLS_FILTER(FREEBAYES.out.variant)
+    //FREEBAYES(align_ref, BAMINDEX.out.align)
+    //BCFTOOLS_STATS(FREEBAYES.out.variant)
+    //BCFTOOLS_FILTER(FREEBAYES.out.variant)
 
 
 }
