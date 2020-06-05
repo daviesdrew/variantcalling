@@ -453,29 +453,27 @@ process BWA {
 // Build the reference genome index
 //*****************************************************************************
 
-process BOWTIE2 {
+process BOWTIE2INDEX {
     tag "$sample_id"
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
-    publishDir "${params.outdir}/align/alignment",
-                pattern: "*.sam", mode: 'copy'
+
     input:
         file ref
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        tuple val(sample_id), path(r1), path(r2), path(align),
-                emit: 'align'
+        tuple val(sample_id), path(r1), path(r2), //path(indexes),
+                emit: 'reads'
 
     script:
         index_dir = "./index"
         indexes = "./index/index"
-        align = "${sample_id}_bowtie2_align_pe.sam"
-    
+
     """
     sudo mkdir $index_dir;
     sudo chmod 777 $index_dir;
     bowtie2-build $ref $indexes;
-    bowtie2 -x $indexes -1 $r1 -2 $r2 > $align;
+    bowtie2 -x $indexes -1 $r1 -2 $r2 > $align
     """
 }
 
@@ -487,7 +485,7 @@ process BOWTIE2 {
 // Utilizes reference genome
 //*****************************************************************************
 
-process BOWTIE2_DEPRECATED {
+process BOWTIE2 {
     tag "$sample_id"
     publishDir "${params.outdir}/align/alignment",
                 pattern: "*.sam", mode: 'copy'
@@ -540,36 +538,6 @@ process MINIMAP2INDEX {
 //*****************************************************************************
 
 //*****************************************************************************
-// PROCESSES: FASTQTOFASTA
-// Convert fastq files to fasta files 
-//*****************************************************************************
-
-process FASTQTOFASTA {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/minimap2",
-                pattern: "*.fasta", mode: 'copy'
-
-    input:
-        tuple val(sample_id), path(r1), path(r2)
-    
-    output:
-        tuple val(sample_id), path(r1_fasta), path(r2_fasta),
-                emit: 'reads'
-    
-    script:
-        r1_fasta = "${sample_id}_1.fastp.fasta"
-        r2_fasta = "${sample_id}_2.fastp.fasta"
-    
-    """
-    sed -n '1~4s/^@/>/p;2~4p' $r1 > $r1_fasta;
-    sed -n '1~4s/^@/>/p;2~4p' $r2 > $r2_fasta;
-
-    """
-}
-
-//*****************************************************************************
-
-//*****************************************************************************
 // PROCESSES: MINIMAP2 
 // Paired End read alignment 
 // Utilizes reference genome
@@ -589,10 +557,10 @@ process MINIMAP2 {
                 emit: 'align'
     
     script:
-        align = "${sample_id}_minimap2_align_pe.sam"
+        align = "${sample_id}_align_pe.sam"
 
     """
-    minimap2 -ax sr $ref $r1 $r2 > $align;
+    bowtie2 -x $indexes -1 $r1 -2 $r2 > $align;
     """
 }
 
@@ -792,11 +760,9 @@ workflow {
     BWAINDEX(align_ref, UNZIP.out.reads)
     BWA(align_ref, BWAINDEX.out.reads)
 
-    BOWTIE2(align_ref, UNZIP.out.reads)
-   
-    FASTQTOFASTA(UNZIP.out.reads)
-    MINIMAP2(align_ref, FASTQTOFASTA.out.reads)
-     
+    BOWTIE2INDEX(align_ref, UNZIP.out.reads)
+    BOWTIE2(align_ref, BOWTIE2INDEX.out.reads)
+    
     //SAMTOBAM(BOWTIE2.out.align)
     //BAMSORT(SAMTOBAM.out.align)
     //BAMINDEX(BAMSORT.out.align)
