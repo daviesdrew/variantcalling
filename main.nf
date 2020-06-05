@@ -451,8 +451,7 @@ process BWA {
         tuple val(sample_id), path(r1), path(r2), path(r1_sai), path(r2_sai)
     
     output:
-        tuple val(sample_id), val('bwa'), val(align),
-                emit: 'align'
+        file "${sample_id}_bwa_align_pe.sam"
     
     script:
         align = "${sample_id}_bwa_align_pe.sam"
@@ -480,8 +479,8 @@ process BOWTIE2 {
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val('bowtie2'), val(align),
-                emit: 'sample_id'
+        file "${sample_id}_bowtie2_align_pe.sam"
+        val sample_id, emit: 'sample_id'
 
     script:
         index_dir = "./index"
@@ -544,8 +543,8 @@ process MINIMAP2 {
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        tuple val(sample_id), val('minimap2'), val(align),  
-                emit: 'align'
+        file "${sample_id}_minimap2_align_pe.sam"
+        val sample_id, emit: 'sample_id'
     
     script:
         align = "${sample_id}_minimap2_align_pe.sam"
@@ -565,22 +564,23 @@ process MINIMAP2 {
 
 process SAMTOBAM {
     tag "$sample_id"
-    publishDir "${params.outdir}/samconvert",
+    publishDir "${params.outdir}/samconvert/${method}",
                 pattern: "*.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), val(method), val(align)
+        file align
+        val sample_id
 
     output:
-        tuple val(sample_id), path(align_bam), 
+        tuple val(sample_id), path(align_bam), val(method), 
                 emit: 'align'
         
     script: 
-        align_path = "${baseDir}/results/align/alignment/${align}"
+        method = "${align}".split('_')[1]
         align_bam = "${sample_id}_${method}_align_pe.bam"
 
     """
-    samtools view -S -b $align_path > $align_bam;
+    samtools view -S -b $align > $align_bam;
     """
 }
 
@@ -597,7 +597,7 @@ process BAMSORT {
                 pattern: "*.sorted.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align)
+        tuple val(sample_id), path(align), val(method)
 
     output:
         tuple val(sample_id), path(sorted_bam), 
@@ -755,19 +755,18 @@ workflow {
 
     BOWTIE2(align_ref, UNZIP.out.reads)
    
-    FASTQTOFASTA(UNZIP.out.reads)
-    MINIMAP2(align_ref, FASTQTOFASTA.out.reads)
-         
+    //FASTQTOFASTA(UNZIP.out.reads)
+    //MINIMAP2(align_ref, FASTQTOFASTA.out.reads)
+    
     sam_output = Channel.watchPath("${params.outdir}/align/alignment/*.sam",
                                     'create')
-    sam_output.view{ "value: $it" }
-
-    SAMTOBAM(sam_output)
+    SAMTOBAM(sam_output, BOWTIE2.out.sample_id)
     BAMSORT(SAMTOBAM.out.align)
     BAMINDEX(BAMSORT.out.align)
-    
+
     //freebayes process
     //FREEBAYES(align_ref, BAMINDEX.out.align)
+     
     //BCFTOOLS_STATS(FREEBAYES.out.variant)
     //BCFTOOLS_FILTER(FREEBAYES.out.variant)
 
