@@ -746,30 +746,32 @@ workflow {
     FASTP(REMOVE_PHIX.out.reads)
     fastqc_reports = FASTQC(FASTP.out.reads)
     
-    align_ref = Channel.value(file("${baseDir}/data/ref.fa"))
+    ch_ref = Channel.value(file("${baseDir}/data/ref.fa"))
     UNZIP(FASTP.out.reads)
     
-    BWAINDEX(align_ref, UNZIP.out.reads)
-    BWA(align_ref, BWAINDEX.out.reads)
+    BWAINDEX(ch_ref, UNZIP.out.reads)
+    BWA(ch_ref, BWAINDEX.out.reads)
 
-    BOWTIE2(align_ref, UNZIP.out.reads)
+    BOWTIE2(ch_ref, UNZIP.out.reads)
    
     FASTQTOFASTA(UNZIP.out.reads)
-    MINIMAP2(align_ref, FASTQTOFASTA.out.reads)
+    MINIMAP2(ch_ref, FASTQTOFASTA.out.reads)
     
-    sam_output = Channel.watchPath("${params.outdir}/align/alignment/*.sam")
+    //alignments = []
+    ch_align = Channel.watchPath("${params.outdir}/align/alignment/*.sam")
                         .buffer{ size: 3 }
                         .view{ "$it" }
-    
-    SAMTOBAM(sam_output, BOWTIE2.out.sample_id)
+                        //.subscribe{ alignments.push("$it") }
+    //ch_align = Channel.fromList(alignments)
+    SAMTOBAM(ch_align, BOWTIE2.out.sample_id)
     BAMSORT(SAMTOBAM.out.align)
     BAMINDEX(BAMSORT.out.align)
 
     //freebayes process
-    //FREEBAYES(align_ref, BAMINDEX.out.align)
+    FREEBAYES(ch_ref, BAMINDEX.out.align)
      
-    //BCFTOOLS_STATS(FREEBAYES.out.variant)
-    //BCFTOOLS_FILTER(FREEBAYES.out.variant)
+    BCFTOOLS_STATS(FREEBAYES.out.variant)
+    BCFTOOLS_FILTER(FREEBAYES.out.variant)
 
 
 }
