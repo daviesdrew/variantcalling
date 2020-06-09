@@ -118,6 +118,10 @@ def input_validation(tool_type, tool, tool_args) {
             case 'filter':
                 check_filter(tool)
                 break;
+        
+            case 'consensus':
+                check_consensus(tool)
+                break;
         }
     }
 }
@@ -189,6 +193,38 @@ def check_variant_caller(variant_caller) {
 //----------------------------------------
 
 //----------------------------------------
+// HELPER FUNCTIONS: CHECK CONSENSUS ARGS
+//----------------------------------------
+def check_consensus(consensus) {
+    println("Checking consensus arguments")
+    consensus_args = [:]
+    arg_str_to_dict(params.consensus_args, consensus_args)
+    
+    bcftools_accept_args = ['key', 'bcftools']
+    vcf_consensus_accept_args = ['key', 'vcf_consensus']
+
+    switch(consensus) {
+        case "bcftools": 
+            check_args(consensus, 
+                       consensus_args,
+                       bcftools_accept_args)
+            break;
+
+        case "vcf_consensus":
+            check_args(consensus,
+                       consensus_args, 
+                       vcf_consensus_accept_args)
+            break;
+
+        default: 
+           check_args(consensus, 
+                      consensus_args,
+                      bcftools_accept_args)
+    } 
+}
+//----------------------------------------
+
+//----------------------------------------
 // HELPER FUNCTIONS: CHECK FILTER ARGS 
 //----------------------------------------
 def check_filter(filter) {
@@ -196,19 +232,19 @@ def check_filter(filter) {
     filter_args = [:]
     arg_str_to_dict(params.filter_args, filter_args)
     
-    filter_accept_args = ['key', 'bcftools']
+    bcftools_accept_args = ['key', 'bcftools']
     
      switch(filter) {
-        case "freebayes": 
+        case "bcftools": 
            check_args(filter,
                       filter_args,
-                      filter_accept_args)
+                      bcftools_accept_args)
             break;
 
         default: 
             check_args(filter,
                        filter_args,
-                       filter_accept_args)
+                       bcftools_accept_args)
     }
 }
 //----------------------------------------
@@ -220,6 +256,7 @@ def check_filter(filter) {
 input_validation('align', params.align, 'align_args')
 input_validation('variant', params.variant, 'variant_args')
 input_validation('filter', params.filter, 'filter_args')
+input_validation('consensus', params.consensus, 'consensus_args')
 
 //=============================================================================
 // WORKFLOW RUN PARAMETERS LOGGING
@@ -756,6 +793,8 @@ process BCFTOOLS_FILTER {
         tuple val(sample_id), path(variant)
 
     output:
+        tuple val(sample_id), path(variant),
+                emit: 'variant'
         file "${sample_id}_filtered.vcf"
             
     script: 
@@ -764,6 +803,82 @@ process BCFTOOLS_FILTER {
     """
     bcftools stats $variant > $filtered; 
     
+    """
+}
+
+//----------------------------------------
+
+//----------------------------------------
+// PROCESSES: SNPEFF
+// Annotates variants 
+//----------------------------------------
+
+process SNPEFF {
+    tag "$sample_id"
+    publishDir "${params.outdir}/variant/prediction",
+                pattern: "*_annotation.vcf", mode: 'copy'
+
+    input: 
+        tuple val(sample_id), path(variant)
+
+    output:
+        file "${sample_id}_annotation.vcf"
+         tuple val(sample_id), path(variant), 
+                emit: 'annotation' 
+    
+    script:
+        filtered = "${sample_id}_annotation.vcf"
+
+    """
+    java -jar /usr/local/src/snpEff/snpEff.jar -v 
+    """
+}
+
+//----------------------------------------
+
+//----------------------------------------
+// PROCESSES: BCFTOOLS_CONSENSUS
+// Build consensus sequence from variants
+//----------------------------------------
+
+process BCFTOOLS_CONSENSUS {
+    tag "$sample_id"
+    publishDir "${params.outdir}/consensus/bcftools",
+                pattern: "*.txt", mode: 'copy'
+
+    input: 
+        tuple val(sample_id), path(variant)
+
+    output:
+       
+    script:
+
+    """
+    bcftools consensus
+    """
+}
+
+//----------------------------------------
+
+//----------------------------------------
+// PROCESSES: VCF_CONSENSUS
+// Build consensus sequence from variants
+//----------------------------------------
+
+process VCF_CONSENSUS {
+    tag "$sample_id"
+    publishDir "${params.outdir}/consensus/vcf",
+                pattern: "*.txt", mode: 'copy'
+
+    input:
+        tuple val(sample_id), path(variant)
+
+    output:
+
+    script:
+
+    """
+    bcftools consensus
     """
 }
 
@@ -834,17 +949,12 @@ workflow {
      
     BCFTOOLS_STATS(FREEBAYES.out.variant)
     BCFTOOLS_FILTER(FREEBAYES.out.variant)
-
-    //SnpEff
-
-
-
-    //----------------------------------------
-    //----------------------------------------
-    //----------------------------------------
+    SNPEFF(BCFTOOLS_FILTER.out.variant)
+    
     //----------------------------------------
     // Consensus building put in own workflows like aligners
     //----------------------------------------
-    //----------------------------------------
-    //----------------------------------------
+
+
+
 }
