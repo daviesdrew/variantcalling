@@ -279,6 +279,8 @@ summary['Variant Caller']       = params.variant
 summary['Variant Caller Args']  = params.variant_args
 summary['Filter']               = params.filter
 summary['Filter Args']          = params.filter_args
+summary['Consensus']            = params.consensus
+summary['Consensus Args']       = params.consensus_args
 
 summary['Max Memory']           = params.max_memory
 summary['Max CPUs']             = params.max_cpus
@@ -827,10 +829,11 @@ process SNPEFF {
                 emit: 'annotation' 
     
     script:
-        filtered = "${sample_id}_annotation.vcf"
+        annotated = "${sample_id}_annotation.vcf"
 
     """
-    java -jar /usr/local/src/snpEff/snpEff.jar -v 
+    java -jar /usr/local/src/snpEff/snpEff.jar asfv $variant -v \\
+    > $annotated
     """
 }
 
