@@ -745,7 +745,7 @@ process FREEBAYES {
                 emit: 'variant'
     
     script: 
-        variant = "${sample_id}_var.vcf"
+        variant = "${sample_id}.vcf"
 
     """
     freebayes -f $ref $bam > $variant
@@ -847,17 +847,23 @@ process SNPEFF {
 process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
     publishDir "${params.outdir}/consensus/bcftools",
-                pattern: "*.txt", mode: 'copy'
+                pattern: "*.vcf", mode: 'copy'
 
     input: 
+        file ref 
         tuple val(sample_id), path(variant)
 
     output:
+        file "${sample_id}_consensus.vcf"
        
     script:
+        zipped = "${variant}.gz"
+        consensus = "${sample_id}_consensus.vcf"
 
     """
-    bcftools consensus
+    bgzip $variant
+    tabix -p vcf $zipped
+    bcftools consensus -f $ref $zipped > $consensus
     """
 }
 
@@ -957,7 +963,13 @@ workflow {
     //----------------------------------------
     // Consensus building put in own workflows like aligners
     //----------------------------------------
+    
+    if (params.consensus == 'bcftools') {
 
+        BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
 
+    } else if (params.consensus == 'vcf_consensus') {
 
+        VCF_CONSENSUS(SNPEFF.out.annotation)
+    }
 }
