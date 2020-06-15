@@ -77,7 +77,7 @@ def check_arg_existence(tool, tool_args) {
                         ""
 }
 
-def check_dict_args(tool, args, acceptable_args) {
+def check_dict_args(args, acceptable_args) {
     args.keySet()
         .each{ arg -> assert acceptable_args.contains(arg) }
     
@@ -100,7 +100,7 @@ def print_arg_comparison(tool, args, acceptable_args) {
 
 def check_args(tool, tool_args, tool_accept_args) {
     print_arg_comparison(tool, tool_args, tool_accept_args)
-    return check_dict_args(tool, tool_args, tool_accept_args)
+    return check_dict_args(tool_args, tool_accept_args)
 }
 
 
@@ -140,7 +140,17 @@ def check_aligner(aligner) {
     arg_str_to_dict(params.align_args, align_args)
     
     acceptable_args = [ 
-        'bwa': [ 'key', 'bwa', 'one' ],
+        'bwa': [ 'max_edit_distance', 
+                 'max_gap_opens', 
+                 'max_gap_ext',
+                 'no_long_del',
+                 'limit_indel',
+                 'subseq_seed',
+                 'mismatch_pen',
+                 'gap_open_pen',
+                 'max_edit_dist',
+                 'gap_ext_pen'
+                 ],
         'minimap2': [ 'key', 'minimap2' ],
         'bowtie2': [ 'key', 'bowtie2' ]
     ]
@@ -487,8 +497,8 @@ process BWAINDEX {
 
     """
     bwa index $ref;
-    bwa aln $ref $r1 > $r1_sai;
-    bwa aln $ref $r2 > $r2_sai;
+    bwa aln -t ${task.cpus} -I $ref $r1 > $r1_sai;
+    bwa aln -t ${task.cpus} -I $ref $r2 > $r2_sai;
     """
 }
 
@@ -936,18 +946,17 @@ workflow {
     // Consensus building put in own workflows like aligners
     //----------------------------------------
     
-    if (params.containsKey('consensus')) {
-        if (params.consensus == 'bcftools') {
+    if (params.consensus == 'bcftools') {
 
-            BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+        BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
 
-        } else if (params.consensus == 'vcf_consensus') {
+    } else if (params.consensus == 'vcf_consensus') {
 
-            VCF_CONSENSUS(ch_ref, SNPEFF.out.annotation)
-        }
+        VCF_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+    
     } else {
 
         BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+    
     }
-
 }
