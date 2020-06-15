@@ -536,7 +536,7 @@ process BWA {
     
     output:
         file "${sample_id}_bwa_align_pe.sam"
-        val sample_id, emit: 'sample_id'
+        tuple val(sample_id), path(align), emit: 'align'
     
     script:
         align = "${sample_id}_bwa_align_pe.sam"
@@ -565,7 +565,7 @@ process BOWTIE2 {
 
     output:
         file "${sample_id}_bowtie2_align_pe.sam"
-        val sample_id, emit: 'sample_id'
+        tuple val(sample_id), path(align), emit: 'sample_id'
 
     script:
         index_dir = "./index"
@@ -629,7 +629,7 @@ process MINIMAP2 {
     
     output:
         file "${sample_id}_minimap2_align_pe.sam"
-        val sample_id, emit: 'sample_id'
+        tuple val(sample_id), path(align), emit: 'align'
     
     script:
         align = "${sample_id}_minimap2_align_pe.sam"
@@ -653,8 +653,7 @@ process SAMTOBAM {
                 pattern: "*.bam", mode: "copy"
 
     input: 
-        file align
-        val sample_id
+        tuple val(sample_id), path(align) 
 
     output:
         tuple val(sample_id), path(align_bam), val(method), 
@@ -741,7 +740,7 @@ process FREEBAYES {
         tuple val(sample_id), path(bam)
 
     output:
-        tuple val(sample_id), path(variant), 
+        tuple val(sample_id), path(variant), path(ref), 
                 emit: 'variant'
     
     script: 
@@ -765,7 +764,7 @@ process BCFTOOLS_STATS {
                 pattern: "*_stats.txt", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant)
+        tuple val(sample_id), path(variant), path(ref)
 
     output:
         file "${sample_id}_stats.txt"
@@ -774,7 +773,7 @@ process BCFTOOLS_STATS {
         stats = "${sample_id}_stats.txt"
 
     """
-    bcftools stats $variant > $stats; 
+    bcftools stats -F $ref $variant > $stats; 
     
     """
 }
@@ -792,7 +791,7 @@ process BCFTOOLS_FILTER {
                 pattern: "*_filtered.vcf", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant)
+        tuple val(sample_id), path(variant), path(ref)
 
     output:
         tuple val(sample_id), path(variant),
@@ -924,8 +923,8 @@ workflow {
     // Aligners Put each aligner in a different workflow
     //----------------------------------------
     ch_ref = Channel.value(file("${baseDir}/data/ref.fa"))
-    ch_align = Channel.watchPath("${params.outdir}/align/alignment/*.sam")
-                        .view{ "$it" }
+    //ch_align = Channel.watchPath("${params.outdir}/align/alignment/*.sam")
+    //                    .view{ "$it" }
 
     UNZIP(FASTP.out.reads)
     
@@ -933,18 +932,18 @@ workflow {
         
         BWAINDEX(ch_ref, UNZIP.out.reads)
         BWA(ch_ref, BWAINDEX.out.reads)
-        SAMTOBAM(ch_align, BWA.out.sample_id)
+        SAMTOBAM(BWA.out.align) //ch_align, BWA.out.sample_id)
     
     } else if (params.align == 'bowtie2') {
         
         BOWTIE2(ch_ref, UNZIP.out.reads)
-        SAMTOBAM(ch_align, BOWTIE2.out.sample_id)
+        SAMTOBAM(BOWTIE2.out.align)
 
     } else if (params.align == 'minimap2') {
         
         FASTQTOFASTA(UNZIP.out.reads)
         MINIMAP2(ch_ref, FASTQTOFASTA.out.reads)
-        SAMTOBAM(ch_align, MINIMAP2.out.sample_id)
+        SAMTOBAM(MINIMAP2.out.align)
     }
     
     //----------------------------------------
