@@ -68,6 +68,15 @@ if (params.help) {
 //----------------------------------------
 // HELPER FUNCTIONS: GENERAL TOOLS
 //----------------------------------------
+def check_arg_existence(tool, tool_args) {
+    params[tool] = (params.containsKey(tool)) ?
+                        params[tool] :
+                        null
+    params[tool_args] = (params.containsKey(tool_args)) ?
+                        params[tool_args] :
+                        ""
+}
+
 def check_dict_args(tool, args, acceptable_args) {
     args.keySet()
         .each{ arg -> assert acceptable_args.contains(arg) }
@@ -99,14 +108,9 @@ def check_args(tool, tool_args, tool_accept_args) {
 // HELPER FUNCTIONS: INPUT VALIDATION
 //----------------------------------------
 
-def input_validation(tool_type, tool, tool_args) {
-    if (params[tool_type] == null || params[tool_args] == null ||
-        !(params.containsKey(tool_type) && params.containsKey(tool_args))) {
-        params[tool_type] = null
-        params[tool_args] = null
-    } else {
-        switch(tool_type) {
-            
+def input_validation(tool_type, tool_args) {
+    tool = params[tool_type]
+    switch(tool_type) {
             case 'align':
                 check_aligner(tool)
                 break;
@@ -122,7 +126,6 @@ def input_validation(tool_type, tool, tool_args) {
             case 'consensus':
                 check_consensus(tool)
                 break;
-        }
     }
 }
 //----------------------------------------
@@ -135,35 +138,20 @@ def check_aligner(aligner) {
 
     align_args = [:]
     arg_str_to_dict(params.align_args, align_args)
-
-    bwa_accept_args = ['key', 'bwa', 'one']
-    minimap2_accept_args = ['key', 'minimap2']
-    bowtie2_accept_args = ['key', 'bowtie2']
     
-    switch(aligner) {
-        case "bwa": 
-            check_args(aligner, 
-                       align_args, 
-                       bwa_accept_args)
-            break;
+    acceptable_args = [ 
+        'bwa': [ 'key', 'bwa', 'one' ],
+        'minimap2': [ 'key', 'minimap2' ],
+        'bowtie2': [ 'key', 'bowtie2' ]
+    ]
 
-        case "minimap2":
-            check_args(aligner,
-                       align_args, 
-                       minimap2_accept_args)
-            break;
+    if (aligner == null) 
+        aligner = 'bwa'
 
-        case "bowtie2": 
-            check_args(aligner, 
-                       align_args,
-                       bowtie2_accept_args)
-            break;
-
-        default: 
-            check_args(aligner, 
-                       align_args,
-                       bowtie2_accept_args)
-    }
+    check_args(aligner, 
+               align_args,
+               acceptable_args[aligner])
+   
 }
 //----------------------------------------
 
@@ -175,20 +163,16 @@ def check_variant_caller(variant_caller) {
     variant_caller_args = [:]
     arg_str_to_dict(params.variant_args, variant_caller_args)
     
-    freebayes_accept_args = ['key', 'freebayes']
+    acceptable_args = [
+        'freebayes': [ 'key', 'freebayes' ]
+    ]
     
-    switch(variant_caller) {
-        case "freebayes": 
-            check_args(variant_caller, 
-                      variant_caller_args,
-                      freebayes_accept_args)
-            break;
+    if(variant_caller == null) 
+        variant_valler = 'freebayes'
 
-        default: 
-           check_args(variant_caller, 
-                      variant_caller_args,
-                      freebayes_accept_args)
-    } 
+    check_args(variant_caller,
+               variant_caller_args,
+               acceptable_args[variant_caller])
 }
 //----------------------------------------
 
@@ -198,29 +182,22 @@ def check_variant_caller(variant_caller) {
 def check_consensus(consensus) {
     println("Checking consensus arguments")
     consensus_args = [:]
-    arg_str_to_dict(params.consensus_args, consensus_args)
     
-    bcftools_accept_args = ['key', 'bcftools']
-    vcf_consensus_accept_args = ['key', 'vcf_consensus']
+    if (consensus != null) {
+        arg_str_to_dict(params.consensus_args, consensus_args)
+    }
 
-    switch(consensus) {
-        case "bcftools": 
-            check_args(consensus, 
-                       consensus_args,
-                       bcftools_accept_args)
-            break;
+    acceptable_args = [
+        'bcftools': [ 'key', 'bcftools' ],
+        'vcf_consensus': [ 'key', 'vcf_consensus' ],
+    ]
 
-        case "vcf_consensus":
-            check_args(consensus,
-                       consensus_args, 
-                       vcf_consensus_accept_args)
-            break;
-
-        default: 
-           check_args(consensus, 
-                      consensus_args,
-                      bcftools_accept_args)
-    } 
+    if (consensus == null)
+        consensus = 'bcftools'
+    
+    check_args(consensus,
+               consensus_args,
+               acceptable_args[consensus])
 }
 //----------------------------------------
 
@@ -232,20 +209,13 @@ def check_filter(filter) {
     filter_args = [:]
     arg_str_to_dict(params.filter_args, filter_args)
     
-    bcftools_accept_args = ['key', 'bcftools']
+    acceptable_args = [
+        'bcftools': ['key', 'bcftools']
+    ]
     
-     switch(filter) {
-        case "bcftools": 
-           check_args(filter,
-                      filter_args,
-                      bcftools_accept_args)
-            break;
-
-        default: 
-            check_args(filter,
-                       filter_args,
-                       bcftools_accept_args)
-    }
+    check_args(filter,
+               filter_args,
+               acceptable_args[filter])
 }
 //----------------------------------------
 
@@ -253,10 +223,13 @@ def check_filter(filter) {
 // INPUT VALIDATION
 //=============================================================================
 
-input_validation('align', params.align, 'align_args')
-input_validation('variant', params.variant, 'variant_args')
-input_validation('filter', params.filter, 'filter_args')
-input_validation('consensus', params.consensus, 'consensus_args')
+arguments = [ 'align': 'align_args', 
+              'variant': 'variant_args',
+              'filter': 'filter_args',
+              'consensus': 'consensus_args' ] 
+
+arguments.each{ k, v -> check_arg_existence(k, v) }
+arguments.each{ k, v -> input_validation(k, v) }
 
 //=============================================================================
 // WORKFLOW RUN PARAMETERS LOGGING
@@ -279,7 +252,9 @@ summary['Variant Caller']       = params.variant
 summary['Variant Caller Args']  = params.variant_args
 summary['Filter']               = params.filter
 summary['Filter Args']          = params.filter_args
-summary['Consensus']            = params.consensus
+summary['Consensus']            = (params.containsKey('consensus'))
+                                    ? params.consensus
+                                    : null
 summary['Consensus Args']       = params.consensus_args
 
 summary['Max Memory']           = params.max_memory
@@ -684,7 +659,7 @@ process BAMSORT {
         tuple val(sample_id), path(align), val(method)
 
     output:
-        tuple val(sample_id), path(sorted_bam), 
+        tuple val(sample_id), path(sorted_bam), val(method),
                 emit: 'align'
     
     script: 
@@ -708,10 +683,10 @@ process BAMINDEX {
                 pattern: "*.bai", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align)
+        tuple val(sample_id), path(align), val(method)
 
     output:
-        tuple val(sample_id),  path(align),
+        tuple val(sample_id),  path(align), val(method),
                 emit: 'align'
     
     script: 
@@ -737,7 +712,7 @@ process FREEBAYES {
 
     input: 
         file ref
-        tuple val(sample_id), path(bam)
+        tuple val(sample_id), path(bam), val(method)
 
     output:
         tuple val(sample_id), path(variant), path(ref), 
@@ -923,8 +898,6 @@ workflow {
     // Aligners Put each aligner in a different workflow
     //----------------------------------------
     ch_ref = Channel.value(file("${baseDir}/data/ref.fa"))
-    //ch_align = Channel.watchPath("${params.outdir}/align/alignment/*.sam")
-    //                    .view{ "$it" }
 
     UNZIP(FASTP.out.reads)
     
@@ -963,12 +936,18 @@ workflow {
     // Consensus building put in own workflows like aligners
     //----------------------------------------
     
-    if (params.consensus == 'bcftools') {
+    if (params.containsKey('consensus')) {
+        if (params.consensus == 'bcftools') {
+
+            BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+
+        } else if (params.consensus == 'vcf_consensus') {
+
+            VCF_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+        }
+    } else {
 
         BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
-
-    } else if (params.consensus == 'vcf_consensus') {
-
-        VCF_CONSENSUS(SNPEFF.out.annotation)
     }
+
 }
