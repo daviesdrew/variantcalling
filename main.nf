@@ -149,7 +149,11 @@ def check_aligner(aligner) {
                  'mismatch_pen',
                  'gap_open_pen',
                  'max_edit_dist',
-                 'gap_ext_pen'
+                 'gap_ext_pen',
+                 'max_insert',
+                 'max_occur',
+                 'max_align',
+                 'max_discord'
                  ],
         'minimap2': [ 'key', 'minimap2' ],
         'bowtie2': [ 'key', 'bowtie2' ]
@@ -285,25 +289,6 @@ summary['Config Profile']       = workflow.profile
 //=============================================================================
 // PROCESSES
 //=============================================================================
-
-//----------------------------------------
-// PROCESSES: RESULTDIR
-//----------------------------------------
-process RESULTDIR {
-    publishDir "${params.outdir}/align/alignment", 
-                pattern: "*.txt", mode: 'copy'
-     
-    output: 
-        file "readme.txt"
-    
-    script:
-        alignment = "readme.txt"
-    
-    """
-    echo "readme" > $alignment
-    """
-}
-//----------------------------------------
 
 //----------------------------------------
 // PROCESSES: REMOVE_PHIX
@@ -528,7 +513,7 @@ process BWA {
     
     """
     bwa index $ref;
-    bwa sampe $ref $r2_sai $r2_sai $r1 $r2 > $align;
+    bwa sampe -P $ref $r2_sai $r2_sai $r1 $r2 > $align;
     """
 }
 
