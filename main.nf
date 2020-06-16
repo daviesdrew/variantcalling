@@ -52,6 +52,107 @@ def helpMessage() {
 
     ${c_bul}Mandatory Options:${c_reset}
       --reads [file]                Path to input data (must be surrounded with quotes)
+    
+    
+    
+    
+    ${c_bul}BWA Aligner Options:${c_reset}
+      --max_edit_dist []             Desc ': 'n', //bwa aln -n
+                    
+      --max_gap_opens []             Desc ': 'o', //bwa aln -o
+                    
+      --max_gap_ext []               Desc ': 'e', //bwa aln -e
+      
+      --no_long_del []               Desc ': 'd', //bwa aln -d 
+      
+      --limit_indel []               Desc ': 'i', //bwa aln -i
+      
+      --subseq_seed []               Desc ': 'l', //bwa aln -l
+      
+      --mismatch_pen []              Desc ': 'M', //bwa aln -M
+      
+      --gap_open_pen []              Desc ': 'O', //bwa aln -O
+      
+      --max_seed_edit_dist []        Desc ': 'k', //bwa aln -k
+      
+      --gap_ext_pen []               Desc ': 'E', //bwa aln -E
+      
+      --max_insert []                Desc ': 'a', //bwa sampe -a
+      
+      --max_occur []                 Desc ': 'o', //bwa sampe -o
+      
+      --max_align []                 Desc ': 'n', //bwa sampe -n
+      
+      --max_discord []               Desc ': 'N', //bwa sampe -N
+      
+      --index_algo []                Desc ': 'a' //bwa index -a
+
+   ${c_bul}Bowtie2 Aligner Options:${c_reset}
+     --end_to_end []                 Desc 
+     
+     --very_fast_local []            Desc
+     
+     --fast_local []                 Desc
+     
+     --sensitive_local []            Desc 
+    
+     --very_sensitive_local []       Desc
+
+     --dpad []                       Desc
+
+     --gbar []                       Desc
+
+     --ext_attempt_count []          Desc
+
+     --max_reseed []                 Desc
+
+     --minins []                     Desc
+
+     --maxins []                     Desc
+
+     --preseq_assay []               Desc
+
+     --no_mixed []                   Desc
+
+     --no_contain []                 Desc
+
+     --no_lap []                     Desc
+
+     --qc_filter []                  Desc
+
+   ${c_bul}Minimap2 Aligner Options:${c_reset}
+     --end_to_end []                 Desc 
+     
+     --very_fast_local []            Desc
+     
+     --fast_local []                 Desc
+     
+     --sensitive_local []            Desc 
+    
+     --very_sensitive_local []       Desc
+
+     --dpad []                       Desc
+
+     --gbar []                       Desc
+
+     --ext_attempt_count []          Desc
+
+     --max_reseed []                 Desc
+
+     --minins []                     Desc
+
+     --maxins []                     Desc
+
+     --preseq_assay []               Desc
+
+     --no_mixed []                   Desc
+
+     --no_contain []                 Desc
+
+     --no_lap []                     Desc
+
+     --qc_filter []                  Desc
+
     """.stripIndent()
 }
 
@@ -65,27 +166,43 @@ if (params.help) {
 // CONSTANT VALUES
 //=============================================================================
 
-params.bwa_args = [ 'max_edit_dist': 'n', //bwa aln -n
-                    'max_gap_opens': 'o', //bwa aln -o
-                    'max_gap_ext': 'e', //bwa aln -e
-                    'no_long_del': 'd', //bwa aln -d 
-                    'limit_indel': 'i', //bwa aln -i
-                    'subseq_seed': 'l', //bwa aln -l
-                    'mismatch_pen': 'M', //bwa aln -M
-                    'gap_open_pen': 'O', //bwa aln -O
-                    'max_seed_edit_dist': 'k', //bwa aln -k
-                    'gap_ext_pen': 'E', //bwa aln -E
-                    'max_insert': 'a', //bwa sampe -a
-                    'max_occur': 'o', //bwa sampe -o
-                    'max_align': 'n', //bwa sampe -n
-                    'max_discord': 'N', //bwa sampe -N
-                    'index_algo': 'a' //bwa index -a
-                ]
+params.bwa_args = [ 
+    'max_edit_dist': 'n', //bwa aln -n
+    'max_gap_opens': 'o', //bwa aln -o
+    'max_gap_ext': 'e', //bwa aln -e
+    'no_long_del': 'd', //bwa aln -d 
+    'limit_indel': 'i', //bwa aln -i
+    'subseq_seed': 'l', //bwa aln -l
+    'mismatch_pen': 'M', //bwa aln -M
+    'gap_open_pen': 'O', //bwa aln -O
+    'max_seed_edit_dist': 'k', //bwa aln -k
+    'gap_ext_pen': 'E', //bwa aln -E
+    'max_insert': 'a', //bwa sampe -a
+    'max_occur': 'o', //bwa sampe -o
+    'max_align': 'n', //bwa sampe -n
+    'max_discord': 'N', //bwa sampe -N
+    'index_algo': 'a' //bwa index -a
+]
 
-params.bowtie2_args = [ 'key': 'one', 
-                        'bowtie2': 'two'
-                      ]
- 
+params.bowtie2_args = [ 
+    'end_to_end': '-end-to-end', //bowtie2 --end-to-end
+    'very_fast_local': '-very-fast-local', //bowtie2 --very-fast-local
+    'fast_local': '-fast-local', //bowtie2 --fast-local
+    'sensitive_local': '-sensitive-local', //bowtie2 --sensitive-local
+    'very_sensitive_local': '-very-sensitive-local', //bowtie2 --very-sensitive-local
+    'dpad': '-dpad', //bowtie2 --dpad
+    'gbar': '-bgar', //bowtie2 --gbar
+    'ext_attempt_count': 'D', //bowtie2 -D [int]
+    'max_reseed': 'R', //bowtie2 -R [int]
+    'minins': '-minins', //bowtie2 --minins [int]
+    'maxins': '-maxins', //bowtie2 --maxins [int]
+    'preseq_assay': '-fr', //bowtie2 --fr
+    'no_mixed': '-no-mixed', //bowtie2 --no-mixed
+    'no_contain': '-no-contain', //bowtie2 --no-contain
+    'no_lap': '-no-overlap', //bowtie2 --no-overlap
+    'qc_filter': '-qc_filter', //bowtie2 --qc-filter
+]
+
 params.minimap2_args = [ 'key': 'one', 
                          'minimap2': 'two' 
                        ]
@@ -111,14 +228,6 @@ def check_dict_args(args, acceptable_args) {
     
     return args
 }
-
-//def swap(dict_one, dict_two, key) {
-  //  dict_two[dict_one[key]] = dict_one
-
-//def swap_arg_keys(args, swapped_args) {
-  //  swapped_args = [:]
-    //args.keySet()
-      //  .each{ arg -> swapped_args[
 
 def swap_arg_keys(pipeline_args, cmd_args, new_dict) {
     pipeline_args.keySet()
@@ -607,7 +716,7 @@ process BOWTIE2 {
 
     output:
         file "${sample_id}_bowtie2_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'sample_id'
+        tuple val(sample_id), path(align), emit: 'align'
 
     script:
         index_dir = "./index"
@@ -618,7 +727,7 @@ process BOWTIE2 {
     sudo mkdir $index_dir;
     sudo chmod 777 $index_dir;
     bowtie2-build $ref $indexes;
-    bowtie2 -x $indexes -1 $r1 -2 $r2 > $align;
+    bowtie2 --threads ${task.cpus} -x $indexes -1 $r1 -2 $r2 -S $align;
     """
 }
 
