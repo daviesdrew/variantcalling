@@ -62,6 +62,34 @@ if (params.help) {
 }
 
 //=============================================================================
+// CONSTANT VALUES
+//=============================================================================
+
+params.bwa_args = [ 'max_edit_dist': 'n', //bwa aln -n
+                    'max_gap_opens': 'o', //bwa aln -o
+                    'max_gap_ext': 'e', //bwa aln -e
+                    'no_long_del': 'd', //bwa aln -d 
+                    'limit_indel': 'i', //bwa aln -i
+                    'subseq_seed': 'l', //bwa aln -l
+                    'mismatch_pen': 'M', //bwa aln -M
+                    'gap_open_pen': 'O', //bwa aln -O
+                    'max_seed_edit_dist': 'k', //bwa aln -k
+                    'gap_ext_pen': 'E', //bwa aln -E
+                    'max_insert': 'a', //bwa sampe -a
+                    'max_occur': 'o', //bwa sampe -o
+                    'max_align': 'n', //bwa sampe -n
+                    'max_discord': 'N', //bwa sampe -N
+                    'index_algo': 'a' //bwa index -a
+                ]
+
+params.bowtie2_args = [ 'key': 'one', 
+                        'bowtie2': 'two'
+                      ]
+ 
+params.minimap2_args = [ 'key': 'one', 
+                         'minimap2': 'two' 
+                       ]
+//=============================================================================
 // HELPER FUNCTIONS
 //=============================================================================
 
@@ -84,6 +112,20 @@ def check_dict_args(args, acceptable_args) {
     return args
 }
 
+//def swap(dict_one, dict_two, key) {
+  //  dict_two[dict_one[key]] = dict_one
+
+//def swap_arg_keys(args, swapped_args) {
+  //  swapped_args = [:]
+    //args.keySet()
+      //  .each{ arg -> swapped_args[
+
+def swap_arg_keys(pipeline_args, cmd_args, new_dict) {
+    pipeline_args.keySet()
+                 .each{ key -> new_dict[cmd_args[key]] = pipeline_args[key] }
+    return new_dict 
+}
+
 def arg_str_to_dict(arg_str, dict) {
     arg_str.tokenize(',')
         .each{ arg -> 
@@ -99,8 +141,15 @@ def print_arg_comparison(tool, args, acceptable_args) {
 }
 
 def check_args(tool, tool_args, tool_accept_args) {
-    print_arg_comparison(tool, tool_args, tool_accept_args)
-    return check_dict_args(tool_args, tool_accept_args)
+    tool_arg_keys = tool_accept_args.keySet()
+    print_arg_comparison(tool, tool_args, tool_arg_keys)
+    args = check_dict_args(tool_args, tool_arg_keys)
+    new_dict = [:]
+    new_dict = swap_arg_keys(tool_args, tool_accept_args, new_dict)
+    println("new_dict")
+    println("${new_dict}")
+    
+    return new_dict
 }
 
 
@@ -111,20 +160,28 @@ def check_args(tool, tool_args, tool_accept_args) {
 def input_validation(tool_type, tool_args) {
     tool = params[tool_type]
     switch(tool_type) {
+            
             case 'align':
-                check_aligner(tool)
+                args = check_aligner(tool)
+                println("Args with cmd specific options")
+                println("${args}")
+
+                //check_sys_for_aligner(tool)
                 break;
 
             case 'variant': 
                 check_variant_caller(tool)
+                //check_sys_for_variant_caller(tool)
                 break;
 
             case 'filter':
                 check_filter(tool)
+                //check_sys_for_filter(tool)
                 break;
         
             case 'consensus':
                 check_consensus(tool)
+                //check_sys_for_consensus(tool)
                 break;
     }
 }
@@ -138,33 +195,20 @@ def check_aligner(aligner) {
 
     align_args = [:]
     arg_str_to_dict(params.align_args, align_args)
+
     
     acceptable_args = [ 
-        'bwa': [ 'max_edit_distance', 
-                 'max_gap_opens', 
-                 'max_gap_ext',
-                 'no_long_del',
-                 'limit_indel',
-                 'subseq_seed',
-                 'mismatch_pen',
-                 'gap_open_pen',
-                 'max_edit_dist',
-                 'gap_ext_pen',
-                 'max_insert',
-                 'max_occur',
-                 'max_align',
-                 'max_discord'
-                 ],
-        'minimap2': [ 'key', 'minimap2' ],
-        'bowtie2': [ 'key', 'bowtie2' ]
+        'bwa': params.bwa_args,
+        'minimap2': params.minimap2_args,
+        'bowtie2': params.bowtie2_args     
     ]
 
     if (aligner == null) 
         aligner = 'bwa'
 
-    check_args(aligner, 
-               align_args,
-               acceptable_args[aligner])
+    return check_args(aligner, 
+                      align_args,
+                      acceptable_args[aligner])
    
 }
 //----------------------------------------
@@ -178,15 +222,15 @@ def check_variant_caller(variant_caller) {
     arg_str_to_dict(params.variant_args, variant_caller_args)
     
     acceptable_args = [
-        'freebayes': [ 'key', 'freebayes' ]
+        'freebayes': [ 'key': 'one', 'freebayes': 'two' ]
     ]
     
     if(variant_caller == null) 
         variant_valler = 'freebayes'
 
-    check_args(variant_caller,
-               variant_caller_args,
-               acceptable_args[variant_caller])
+    return check_args(variant_caller,
+                      variant_caller_args,
+                      acceptable_args[variant_caller])
 }
 //----------------------------------------
 
@@ -202,16 +246,16 @@ def check_consensus(consensus) {
     }
 
     acceptable_args = [
-        'bcftools': [ 'key', 'bcftools' ],
-        'vcf_consensus': [ 'key', 'vcf_consensus' ],
+        'bcftools': [ 'key': 'one', 'bcftools': 'two' ],
+        'vcf_consensus': [ 'key': 'one', 'vcf_consensus': 'two' ],
     ]
 
     if (consensus == null)
         consensus = 'bcftools'
     
-    check_args(consensus,
-               consensus_args,
-               acceptable_args[consensus])
+    return check_args(consensus,
+                      consensus_args,
+                      acceptable_args[consensus])
 }
 //----------------------------------------
 
@@ -224,12 +268,12 @@ def check_filter(filter) {
     arg_str_to_dict(params.filter_args, filter_args)
     
     acceptable_args = [
-        'bcftools': ['key', 'bcftools']
+        'bcftools': ['key': 'one', 'bcftools': 'two']
     ]
     
-    check_args(filter,
-               filter_args,
-               acceptable_args[filter])
+    return check_args(filter,
+                      filter_args,
+                      acceptable_args[filter])
 }
 //----------------------------------------
 
@@ -481,14 +525,29 @@ process BWAINDEX {
         r2_sai = "${sample_id}_2.sai"
 
     """
-    bwa index $ref;
+    bwa index -a bwtsw $ref;
     bwa aln -t ${task.cpus} -I $ref $r1 > $r1_sai;
     bwa aln -t ${task.cpus} -I $ref $r2 > $r2_sai;
     """
 }
 
 //----------------------------------------
-
+/* 
+ 'max_edit_dist', //bwa aln -n
+ 'max_gap_opens', //bwa aln -o
+ 'max_gap_ext', //bwa aln -e
+ 'no_long_del', //bwa aln -d 
+ 'limit_indel', //bwa aln -i
+ 'subseq_seed', //bwa aln -l
+ 'mismatch_pen', //bwa aln -M
+ 'gap_open_pen', //bwa aln -O
+ 'max_seed_edit_dist', //bwa aln -k
+ 'gap_ext_pen', //bwa aln -E
+ 'max_insert', //bwa sampe -a
+ 'max_occur', //bwa sampe -o
+ 'max_align', //bwa sampe -n
+ 'max_discord' //bwa sampe -N
+*/
 //----------------------------------------
 // PROCESSES: BWA 
 // Paired End read alignment 
@@ -508,11 +567,15 @@ process BWA {
         file "${sample_id}_bwa_align_pe.sam"
         tuple val(sample_id), path(align), emit: 'align'
     
+    echo true
+    
     script:
         align = "${sample_id}_bwa_align_pe.sam"
-    
+        args = "${params.align_args}"
+      
     """
-    bwa index $ref;
+    echo $args
+    bwa index -a bwtsw $ref;
     bwa sampe -P $ref $r2_sai $r2_sai $r1 $r2 > $align;
     """
 }
