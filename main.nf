@@ -208,7 +208,22 @@ params.bowtie2_args = [
 ]
 
 params.minimap2_args = [ 
-    'key': 'one', 
+    'minr_kmer_len': 'k', //minimap2 -k [int]
+    'minr_win_size': 'w', //minimap2 -w [int]
+    'homopoly_minr': 'H', //minimap2 -H
+    'save_index': 'd', //minimap2 -d [file]
+    'ignore_minr': 'f', //minimap2 -f [float|int]
+    'min_occ_floor': '-min-occ-floor', //minimap2 --min-occ-floor [int]
+    'stop_chain_elong': 'g', //minimap2 -g [int]
+    'approx_gap_size': 'r', //minimap2 -r [int]
+    'discard_chain_minr': 'n', //minimap2 -n [int]
+    'discard_chain_score': 'm', //minimap2 -m [int]
+    'num_sec_align': 'N', //minimap2 -N [int]
+    'max_ref_gap': 'G', //minimap2 -G [num]
+    'max_frag_len': 'F', //minimap2 -F [num]
+    
+    
+     
     'minimap2': 'two' 
 ]
 
