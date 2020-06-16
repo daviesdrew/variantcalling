@@ -52,6 +52,115 @@ def helpMessage() {
 
     ${c_bul}Mandatory Options:${c_reset}
       --reads [file]                Path to input data (must be surrounded with quotes)
+    
+    
+    
+    
+    ${c_bul}BWA Aligner Options:${c_reset}
+      --max_edit_dist []             Desc ': 'n', //bwa aln -n
+                    
+      --max_gap_opens []             Desc ': 'o', //bwa aln -o
+                    
+      --max_gap_ext []               Desc ': 'e', //bwa aln -e
+      
+      --no_long_del []               Desc ': 'd', //bwa aln -d 
+      
+      --limit_indel []               Desc ': 'i', //bwa aln -i
+      
+      --subseq_seed []               Desc ': 'l', //bwa aln -l
+      
+      --mismatch_pen []              Desc ': 'M', //bwa aln -M
+      
+      --gap_open_pen []              Desc ': 'O', //bwa aln -O
+      
+      --max_seed_edit_dist []        Desc ': 'k', //bwa aln -k
+      
+      --gap_ext_pen []               Desc ': 'E', //bwa aln -E
+      
+      --max_insert []                Desc ': 'a', //bwa sampe -a
+      
+      --max_occur []                 Desc ': 'o', //bwa sampe -o
+      
+      --max_align []                 Desc ': 'n', //bwa sampe -n
+      
+      --max_discord []               Desc ': 'N', //bwa sampe -N
+      
+      --index_algo []                Desc ': 'a' //bwa index -a
+
+   ${c_bul}Bowtie2 Aligner Options:${c_reset}
+     --end_to_end []                 Desc 
+     
+     --very_fast_local []            Desc
+     
+     --fast_local []                 Desc
+     
+     --sensitive_local []            Desc 
+    
+     --very_sensitive_local []       Desc
+
+     --dpad []                       Desc
+
+     --gbar []                       Desc
+
+     --ext_attempt_count []          Desc
+
+     --max_reseed []                 Desc
+
+     --minins []                     Desc
+
+     --maxins []                     Desc
+
+     --preseq_assay []               Desc
+
+     --no_mixed []                   Desc
+
+     --no_contain []                 Desc
+
+     --no_lap []                     Desc
+
+     --qc_filter []                  Desc
+
+   ${c_bul}Minimap2 Aligner Options:${c_reset}
+     --minr_kmer_len []              Desc 
+     
+     --minr_win_size []              Desc
+     
+     --homopoly_min []               Desc
+     
+     --save_index []                 Desc 
+    
+     --ignore_minr []                Desc
+
+     --min_occ_floor []              Desc
+
+     --stop_chain_elong []           Desc
+
+     --approx_gap_size []            Desc
+
+     --discard_chain_minr []         Desc
+
+     --discard_chain_score []        Desc
+
+     --max_ref_gap []                Desc
+
+     --max_frag_len []               Desc
+
+     --splice []                     Desc
+
+     --sr []                         Desc
+
+     --for_only []                   Desc
+
+     --rev_only []                   Desc
+
+     --no_mixed []                   Desc
+
+     --no_contain []                 Desc
+
+     --no_lap []                     Desc
+
+     --qc_filter []                  Desc
+
     """.stripIndent()
 }
 
@@ -62,23 +171,151 @@ if (params.help) {
 }
 
 //=============================================================================
+// CONSTANT VALUES
+//=============================================================================
+
+//----------------------------------------
+// CONSTANT VALUES: ALIGNERS
+//----------------------------------------
+
+params.bwa_args = [ 
+    'max_edit_dist': 'n', //bwa aln -n
+    'max_gap_opens': 'o', //bwa aln -o
+    'max_gap_ext': 'e', //bwa aln -e
+    'no_long_del': 'd', //bwa aln -d 
+    'limit_indel': 'i', //bwa aln -i
+    'subseq_seed': 'l', //bwa aln -l
+    'mismatch_pen': 'M', //bwa aln -M
+    'gap_open_pen': 'O', //bwa aln -O
+    'max_seed_edit_dist': 'k', //bwa aln -k
+    'gap_ext_pen': 'E', //bwa aln -E
+    'max_insert': 'a', //bwa sampe -a
+    'max_occur': 'o', //bwa sampe -o
+    'max_align': 'n', //bwa sampe -n
+    'max_discord': 'N', //bwa sampe -N
+    'index_algo': 'a' //bwa index -a
+]
+
+params.bowtie2_args = [ 
+    'end_to_end': '-end-to-end', //bowtie2 --end-to-end
+    'very_fast_local': '-very-fast-local', //bowtie2 --very-fast-local
+    'fast_local': '-fast-local', //bowtie2 --fast-local
+    'sensitive_local': '-sensitive-local', //bowtie2 --sensitive-local
+    'very_sensitive_local': '-very-sensitive-local', //bowtie2 --very-sensitive-local
+    'dpad': '-dpad', //bowtie2 --dpad
+    'gbar': '-bgar', //bowtie2 --gbar
+    'ext_attempt_count': 'D', //bowtie2 -D [int]
+    'max_reseed': 'R', //bowtie2 -R [int]
+    'minins': '-minins', //bowtie2 --minins [int]
+    'maxins': '-maxins', //bowtie2 --maxins [int]
+    'preseq_assay': '-fr', //bowtie2 --fr
+    'no_mixed': '-no-mixed', //bowtie2 --no-mixed
+    'no_contain': '-no-contain', //bowtie2 --no-contain
+    'no_lap': '-no-overlap', //bowtie2 --no-overlap
+    'qc_filter': '-qc_filter', //bowtie2 --qc-filter
+]
+
+params.minimap2_args = [ 
+    'minr_kmer_len': 'k', //minimap2 -k [int]
+    'minr_win_size': 'w', //minimap2 -w [int]
+    'homopoly_minr': 'H', //minimap2 -H
+    'save_index': 'd', //minimap2 -d [file]
+    'ignore_minr': 'f', //minimap2 -f [float|int]
+    'min_occ_floor': '-min-occ-floor', //minimap2 --min-occ-floor [int]
+    'stop_chain_elong': 'g', //minimap2 -g [int]
+    'approx_gap_size': 'r', //minimap2 -r [int]
+    'discard_chain_minr': 'n', //minimap2 -n [int]
+    'discard_chain_score': 'm', //minimap2 -m [int]
+    'num_sec_align': 'N', //minimap2 -N [int]
+    'max_ref_gap': 'G', //minimap2 -G [num]
+    'max_frag_len': 'F', //minimap2 -F [num]
+    'splice': '-splice', //minimap2 --splice
+    'sr': '-sr', //minimap2 --sr
+    'for_only': '-for-only', //minimap2 --for-only
+    'rev_only': '-rev-only', //minimap2 --rev-only
+    'match_score': 'A', //minimap2 -A [int]
+    'mismatch_pen': 'B', //minimap2 -B [int]
+    'gap_open_pen': 'O', //minimap2 -O [int]
+    'gap_ext_pen': 'E', //minimap2 -E [int]
+    'non_canonical': 'C', //minimap2 -C [int]
+    'end_bonus': '-end-bonus', //minimap2 --end-bonus [int]
+    'ambig_mismatch': '-score-N' //minimap2 --score-N [int]
+]
+
+//----------------------------------------
+
+//----------------------------------------
+// CONSTANT VALUES: VARIANT CALLERS
+//----------------------------------------
+
+params.freebayes_args = [ 
+    'key': 'one' 
+]
+
+//----------------------------------------
+
+//----------------------------------------
+// CONSTANT VALUES: FILTERS
+//----------------------------------------
+
+params.bcftools_filter_args = [
+    'key': 'one'
+]
+//----------------------------------------
+
+//----------------------------------------
+// CONSTANT VALUES: CONSENSUSES 
+//----------------------------------------
+
+params.bcftools_consensus_args = [
+    'key': 'one'
+]
+
+params.vcf_consensus_args = [
+    'key': 'one'
+]
+
+//----------------------------------------
+
+//=============================================================================
 // HELPER FUNCTIONS
 //=============================================================================
 
 //----------------------------------------
 // HELPER FUNCTIONS: GENERAL TOOLS
 //----------------------------------------
-def check_dict_args(tool, args, acceptable_args) {
+def check_arg_existence(tool, tool_args) {
+    params[tool] = (params.containsKey(tool)) ?
+                        params[tool] :
+                        null
+    params[tool_args] = (params.containsKey(tool_args)) ?
+                        params[tool_args] :
+                        ""
+}
+
+def check_dict_args(args, acceptable_args) {
     args.keySet()
         .each{ arg -> assert acceptable_args.contains(arg) }
     
     return args
 }
 
+def swap_arg_keys(pipeline_args, cmd_args, new_dict) {
+    pipeline_args.keySet()
+                 .each{ key -> new_dict[cmd_args[key]] = pipeline_args[key] }
+    return new_dict 
+}
+
 def arg_str_to_dict(arg_str, dict) {
     arg_str.tokenize(',')
         .each{ arg -> 
             dict[arg.tokenize()[0].replace('-','')] = arg.tokenize()[1] }
+}
+
+def arg_dict_to_str(dict) {
+    str = ""
+    dict.each{ k, v -> str = str.concat('-'+k+' ').concat(v+' ') }
+    return str
 }
 
 def print_arg_comparison(tool, args, acceptable_args) {
@@ -90,8 +327,17 @@ def print_arg_comparison(tool, args, acceptable_args) {
 }
 
 def check_args(tool, tool_args, tool_accept_args) {
-    print_arg_comparison(tool, tool_args, tool_accept_args)
-    return check_dict_args(tool, tool_args, tool_accept_args)
+    tool_arg_keys = tool_accept_args.keySet()
+    print_arg_comparison(tool, tool_args, tool_arg_keys)
+    args = check_dict_args(tool_args, tool_arg_keys)
+    new_dict = [:]
+    new_dict = swap_arg_keys(tool_args, tool_accept_args, new_dict)
+    //println("new_dict")
+    //println("${new_dict}")
+    //println("new string from dict")
+    str = arg_dict_to_str(new_dict)
+    //println("${str}")   
+    return str
 }
 
 
@@ -99,31 +345,34 @@ def check_args(tool, tool_args, tool_accept_args) {
 // HELPER FUNCTIONS: INPUT VALIDATION
 //----------------------------------------
 
-def input_validation(tool_type, tool, tool_args) {
-    if (params[tool_type] == null || params[tool_args] == null ||
-        !(params.containsKey(tool_type) && params.containsKey(tool_args))) {
-        params[tool_type] = null
-        params[tool_args] = null
-    } else {
-        switch(tool_type) {
+def input_validation(tool_type, tool_args) {
+    tool = params[tool_type]
+    args = null
+    switch(tool_type) {
             
             case 'align':
-                check_aligner(tool)
+                args = check_aligner(tool)
+                //check_sys_for_aligner(tool)
                 break;
 
             case 'variant': 
-                check_variant_caller(tool)
+                args = check_variant_caller(tool)
+                //check_sys_for_variant_caller(tool)
                 break;
 
             case 'filter':
-                check_filter(tool)
+                args = check_filter(tool)
+                //check_sys_for_filter(tool)
                 break;
         
             case 'consensus':
-                check_consensus(tool)
+                args = check_consensus(tool)
+                //check_sys_for_consensus(tool)
                 break;
-        }
     }
+    println("Args with cmd specific options")
+    println("${args}")
+
 }
 //----------------------------------------
 
@@ -136,34 +385,20 @@ def check_aligner(aligner) {
     align_args = [:]
     arg_str_to_dict(params.align_args, align_args)
 
-    bwa_accept_args = ['key', 'bwa', 'one']
-    minimap2_accept_args = ['key', 'minimap2']
-    bowtie2_accept_args = ['key', 'bowtie2']
     
-    switch(aligner) {
-        case "bwa": 
-            check_args(aligner, 
-                       align_args, 
-                       bwa_accept_args)
-            break;
+    acceptable_args = [ 
+        'bwa': params.bwa_args,
+        'minimap2': params.minimap2_args,
+        'bowtie2': params.bowtie2_args     
+    ]
 
-        case "minimap2":
-            check_args(aligner,
-                       align_args, 
-                       minimap2_accept_args)
-            break;
+    if (aligner == null) 
+        aligner = 'bwa'
 
-        case "bowtie2": 
-            check_args(aligner, 
-                       align_args,
-                       bowtie2_accept_args)
-            break;
-
-        default: 
-            check_args(aligner, 
-                       align_args,
-                       bowtie2_accept_args)
-    }
+    check_args(aligner, 
+               align_args,
+               acceptable_args[aligner])
+    return str
 }
 //----------------------------------------
 
@@ -175,52 +410,16 @@ def check_variant_caller(variant_caller) {
     variant_caller_args = [:]
     arg_str_to_dict(params.variant_args, variant_caller_args)
     
-    freebayes_accept_args = ['key', 'freebayes']
+    acceptable_args = [
+        'freebayes': params.freebayes_args
+    ]
     
-    switch(variant_caller) {
-        case "freebayes": 
-            check_args(variant_caller, 
+    if(variant_caller == null) 
+        variant_valler = 'freebayes'
+
+    return check_args(variant_caller,
                       variant_caller_args,
-                      freebayes_accept_args)
-            break;
-
-        default: 
-           check_args(variant_caller, 
-                      variant_caller_args,
-                      freebayes_accept_args)
-    } 
-}
-//----------------------------------------
-
-//----------------------------------------
-// HELPER FUNCTIONS: CHECK CONSENSUS ARGS
-//----------------------------------------
-def check_consensus(consensus) {
-    println("Checking consensus arguments")
-    consensus_args = [:]
-    arg_str_to_dict(params.consensus_args, consensus_args)
-    
-    bcftools_accept_args = ['key', 'bcftools']
-    vcf_consensus_accept_args = ['key', 'vcf_consensus']
-
-    switch(consensus) {
-        case "bcftools": 
-            check_args(consensus, 
-                       consensus_args,
-                       bcftools_accept_args)
-            break;
-
-        case "vcf_consensus":
-            check_args(consensus,
-                       consensus_args, 
-                       vcf_consensus_accept_args)
-            break;
-
-        default: 
-           check_args(consensus, 
-                      consensus_args,
-                      bcftools_accept_args)
-    } 
+                      acceptable_args[variant_caller])
 }
 //----------------------------------------
 
@@ -232,20 +431,39 @@ def check_filter(filter) {
     filter_args = [:]
     arg_str_to_dict(params.filter_args, filter_args)
     
-    bcftools_accept_args = ['key', 'bcftools']
+    acceptable_args = [
+        'bcftools': params.bcftools_filter_args
+    ]
     
-     switch(filter) {
-        case "bcftools": 
-           check_args(filter,
+    return check_args(filter,
                       filter_args,
-                      bcftools_accept_args)
-            break;
+                      acceptable_args[filter])
+}
 
-        default: 
-            check_args(filter,
-                       filter_args,
-                       bcftools_accept_args)
+//----------------------------------------
+
+//----------------------------------------
+// HELPER FUNCTIONS: CHECK CONSENSUS ARGS
+//----------------------------------------
+def check_consensus(consensus) {
+    println("Checking consensus arguments")
+    consensus_args = [:]
+    
+    if (consensus != null) {
+        arg_str_to_dict(params.consensus_args, consensus_args)
     }
+
+    acceptable_args = [
+        'bcftools': params.bcftools_consensus_args,
+        'vcf_consensus': params.vcf_consensus_args
+    ]
+
+    if (consensus == null)
+        consensus = 'bcftools'
+    
+    return check_args(consensus,
+                      consensus_args,
+                      acceptable_args[consensus])
 }
 //----------------------------------------
 
@@ -253,10 +471,13 @@ def check_filter(filter) {
 // INPUT VALIDATION
 //=============================================================================
 
-input_validation('align', params.align, 'align_args')
-input_validation('variant', params.variant, 'variant_args')
-input_validation('filter', params.filter, 'filter_args')
-input_validation('consensus', params.consensus, 'consensus_args')
+arguments = [ 'align': 'align_args', 
+              'variant': 'variant_args',
+              'filter': 'filter_args',
+              'consensus': 'consensus_args' ] 
+
+arguments.each{ k, v -> check_arg_existence(k, v) }
+arguments.each{ k, v -> input_validation(k, v) }
 
 //=============================================================================
 // WORKFLOW RUN PARAMETERS LOGGING
@@ -279,7 +500,9 @@ summary['Variant Caller']       = params.variant
 summary['Variant Caller Args']  = params.variant_args
 summary['Filter']               = params.filter
 summary['Filter Args']          = params.filter_args
-summary['Consensus']            = params.consensus
+summary['Consensus']            = (params.containsKey('consensus'))
+                                    ? params.consensus
+                                    : null
 summary['Consensus Args']       = params.consensus_args
 
 summary['Max Memory']           = params.max_memory
@@ -300,25 +523,6 @@ summary['Config Profile']       = workflow.profile
 //=============================================================================
 // PROCESSES
 //=============================================================================
-
-//----------------------------------------
-// PROCESSES: RESULTDIR
-//----------------------------------------
-process RESULTDIR {
-    publishDir "${params.outdir}/align/alignment", 
-                pattern: "*.txt", mode: 'copy'
-     
-    output: 
-        file "readme.txt"
-    
-    script:
-        alignment = "readme.txt"
-    
-    """
-    echo "readme" > $alignment
-    """
-}
-//----------------------------------------
 
 //----------------------------------------
 // PROCESSES: REMOVE_PHIX
@@ -511,9 +715,9 @@ process BWAINDEX {
         r2_sai = "${sample_id}_2.sai"
 
     """
-    bwa index $ref;
-    bwa aln $ref $r1 > $r1_sai;
-    bwa aln $ref $r2 > $r2_sai;
+    bwa index -a bwtsw $ref;
+    bwa aln -t ${task.cpus} -I $ref $r1 > $r1_sai;
+    bwa aln -t ${task.cpus} -I $ref $r2 > $r2_sai;
     """
 }
 
@@ -538,12 +742,16 @@ process BWA {
         file "${sample_id}_bwa_align_pe.sam"
         tuple val(sample_id), path(align), emit: 'align'
     
+    echo true
+    
     script:
         align = "${sample_id}_bwa_align_pe.sam"
-    
+        args = "${params.align_args}"
+      
     """
-    bwa index $ref;
-    bwa sampe $ref $r2_sai $r2_sai $r1 $r2 > $align;
+    echo $args
+    bwa index -a bwtsw $ref;
+    bwa sampe -P $ref $r2_sai $r2_sai $r1 $r2 > $align;
     """
 }
 
@@ -565,7 +773,7 @@ process BOWTIE2 {
 
     output:
         file "${sample_id}_bowtie2_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'sample_id'
+        tuple val(sample_id), path(align), emit: 'align'
 
     script:
         index_dir = "./index"
@@ -576,7 +784,7 @@ process BOWTIE2 {
     sudo mkdir $index_dir;
     sudo chmod 777 $index_dir;
     bowtie2-build $ref $indexes;
-    bowtie2 -x $indexes -1 $r1 -2 $r2 > $align;
+    bowtie2 --threads ${task.cpus} -x $indexes -1 $r1 -2 $r2 -S $align;
     """
 }
 
@@ -635,7 +843,7 @@ process MINIMAP2 {
         align = "${sample_id}_minimap2_align_pe.sam"
 
     """
-    minimap2 -ax sr $ref $r1 $r2 > $align;
+    minimap2 -a -t ${task.cpus} -ax sr $ref $r1 $r2 -o $align;
     """
 }
 
@@ -684,7 +892,7 @@ process BAMSORT {
         tuple val(sample_id), path(align), val(method)
 
     output:
-        tuple val(sample_id), path(sorted_bam), 
+        tuple val(sample_id), path(sorted_bam), val(method),
                 emit: 'align'
     
     script: 
@@ -708,10 +916,10 @@ process BAMINDEX {
                 pattern: "*.bai", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align)
+        tuple val(sample_id), path(align), val(method)
 
     output:
-        tuple val(sample_id),  path(align),
+        tuple val(sample_id),  path(align), val(method),
                 emit: 'align'
     
     script: 
@@ -737,7 +945,7 @@ process FREEBAYES {
 
     input: 
         file ref
-        tuple val(sample_id), path(bam)
+        tuple val(sample_id), path(bam), val(method)
 
     output:
         tuple val(sample_id), path(variant), path(ref), 
@@ -923,8 +1131,6 @@ workflow {
     // Aligners Put each aligner in a different workflow
     //----------------------------------------
     ch_ref = Channel.value(file("${baseDir}/data/ref.fa"))
-    //ch_align = Channel.watchPath("${params.outdir}/align/alignment/*.sam")
-    //                    .view{ "$it" }
 
     UNZIP(FASTP.out.reads)
     
@@ -969,6 +1175,11 @@ workflow {
 
     } else if (params.consensus == 'vcf_consensus') {
 
-        VCF_CONSENSUS(SNPEFF.out.annotation)
+        VCF_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+    
+    } else {
+
+        BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+    
     }
 }
