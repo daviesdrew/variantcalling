@@ -145,9 +145,13 @@ def helpMessage() {
 
      --max_frag_len []               Desc
 
+     --splice []                     Desc
 
+     --sr []                         Desc
 
+     --for_only []                   Desc
 
+     --rev_only []                   Desc
 
      --no_mixed []                   Desc
 
@@ -225,10 +229,17 @@ params.minimap2_args = [
     'num_sec_align': 'N', //minimap2 -N [int]
     'max_ref_gap': 'G', //minimap2 -G [num]
     'max_frag_len': 'F', //minimap2 -F [num]
-    
-    
-     
-    'minimap2': 'two' 
+    'splice': '-splice', //minimap2 --splice
+    'sr': '-sr', //minimap2 --sr
+    'for_only': '-for-only', //minimap2 --for-only
+    'rev_only': '-rev-only', //minimap2 --rev-only
+    'match_score': 'A', //minimap2 -A [int]
+    'mismatch_pen': 'B', //minimap2 -B [int]
+    'gap_open_pen': 'O', //minimap2 -O [int]
+    'gap_ext_pen': 'E', //minimap2 -E [int]
+    'non_canonical': 'C', //minimap2 -C [int]
+    'end_bonus': '-end-bonus', //minimap2 --end-bonus [int]
+    'ambig_mismatch': '-score-N' //minimap2 --score-N [int]
 ]
 
 //----------------------------------------
@@ -711,22 +722,7 @@ process BWAINDEX {
 }
 
 //----------------------------------------
-/* 
- 'max_edit_dist', //bwa aln -n
- 'max_gap_opens', //bwa aln -o
- 'max_gap_ext', //bwa aln -e
- 'no_long_del', //bwa aln -d 
- 'limit_indel', //bwa aln -i
- 'subseq_seed', //bwa aln -l
- 'mismatch_pen', //bwa aln -M
- 'gap_open_pen', //bwa aln -O
- 'max_seed_edit_dist', //bwa aln -k
- 'gap_ext_pen', //bwa aln -E
- 'max_insert', //bwa sampe -a
- 'max_occur', //bwa sampe -o
- 'max_align', //bwa sampe -n
- 'max_discord' //bwa sampe -N
-*/
+
 //----------------------------------------
 // PROCESSES: BWA 
 // Paired End read alignment 
@@ -847,7 +843,7 @@ process MINIMAP2 {
         align = "${sample_id}_minimap2_align_pe.sam"
 
     """
-    minimap2 -ax sr $ref $r1 $r2 > $align;
+    minimap2 -a -t ${task.cpus} -ax sr $ref $r1 $r2 -o $align;
     """
 }
 
