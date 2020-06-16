@@ -166,6 +166,10 @@ if (params.help) {
 // CONSTANT VALUES
 //=============================================================================
 
+//----------------------------------------
+// CONSTANT VALUES: ALIGNERS
+//----------------------------------------
+
 params.bwa_args = [ 
     'max_edit_dist': 'n', //bwa aln -n
     'max_gap_opens': 'o', //bwa aln -o
@@ -203,9 +207,46 @@ params.bowtie2_args = [
     'qc_filter': '-qc_filter', //bowtie2 --qc-filter
 ]
 
-params.minimap2_args = [ 'key': 'one', 
-                         'minimap2': 'two' 
-                       ]
+params.minimap2_args = [ 
+    'key': 'one', 
+    'minimap2': 'two' 
+]
+
+//----------------------------------------
+
+//----------------------------------------
+// CONSTANT VALUES: VARIANT CALLERS
+//----------------------------------------
+
+params.freebayes_args = [ 
+    'key': 'one' 
+]
+
+//----------------------------------------
+
+//----------------------------------------
+// CONSTANT VALUES: FILTERS
+//----------------------------------------
+
+params.bcftools_filter_args = [
+    'key': 'one'
+]
+//----------------------------------------
+
+//----------------------------------------
+// CONSTANT VALUES: CONSENSUSES 
+//----------------------------------------
+
+params.bcftools_consensus_args = [
+    'key': 'one'
+]
+
+params.vcf_consensus_args = [
+    'key': 'one'
+]
+
+//----------------------------------------
+
 //=============================================================================
 // HELPER FUNCTIONS
 //=============================================================================
@@ -340,7 +381,7 @@ def check_variant_caller(variant_caller) {
     arg_str_to_dict(params.variant_args, variant_caller_args)
     
     acceptable_args = [
-        'freebayes': [ 'key': 'one', 'freebayes': 'two' ]
+        'freebayes': params.freebayes_args
     ]
     
     if(variant_caller == null) 
@@ -350,6 +391,25 @@ def check_variant_caller(variant_caller) {
                       variant_caller_args,
                       acceptable_args[variant_caller])
 }
+//----------------------------------------
+
+//----------------------------------------
+// HELPER FUNCTIONS: CHECK FILTER ARGS 
+//----------------------------------------
+def check_filter(filter) {
+    println("Checking filter tool arguments")
+    filter_args = [:]
+    arg_str_to_dict(params.filter_args, filter_args)
+    
+    acceptable_args = [
+        'bcftools': params.bcftools_filter_args
+    ]
+    
+    return check_args(filter,
+                      filter_args,
+                      acceptable_args[filter])
+}
+
 //----------------------------------------
 
 //----------------------------------------
@@ -364,8 +424,8 @@ def check_consensus(consensus) {
     }
 
     acceptable_args = [
-        'bcftools': [ 'key': 'one', 'bcftools': 'two' ],
-        'vcf_consensus': [ 'key': 'one', 'vcf_consensus': 'two' ],
+        'bcftools': params.bcftools_consensus_args,
+        'vcf_consensus': params.vcf_consensus_args
     ]
 
     if (consensus == null)
@@ -374,24 +434,6 @@ def check_consensus(consensus) {
     return check_args(consensus,
                       consensus_args,
                       acceptable_args[consensus])
-}
-//----------------------------------------
-
-//----------------------------------------
-// HELPER FUNCTIONS: CHECK FILTER ARGS 
-//----------------------------------------
-def check_filter(filter) {
-    println("Checking filter tool arguments")
-    filter_args = [:]
-    arg_str_to_dict(params.filter_args, filter_args)
-    
-    acceptable_args = [
-        'bcftools': ['key': 'one', 'bcftools': 'two']
-    ]
-    
-    return check_args(filter,
-                      filter_args,
-                      acceptable_args[filter])
 }
 //----------------------------------------
 
