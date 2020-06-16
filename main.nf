@@ -121,29 +121,33 @@ def helpMessage() {
      --qc_filter []                  Desc
 
    ${c_bul}Minimap2 Aligner Options:${c_reset}
-     --end_to_end []                 Desc 
+     --minr_kmer_len []              Desc 
      
-     --very_fast_local []            Desc
+     --minr_win_size []              Desc
      
-     --fast_local []                 Desc
+     --homopoly_min []               Desc
      
-     --sensitive_local []            Desc 
+     --save_index []                 Desc 
     
-     --very_sensitive_local []       Desc
+     --ignore_minr []                Desc
 
-     --dpad []                       Desc
+     --min_occ_floor []              Desc
 
-     --gbar []                       Desc
+     --stop_chain_elong []           Desc
 
-     --ext_attempt_count []          Desc
+     --approx_gap_size []            Desc
 
-     --max_reseed []                 Desc
+     --discard_chain_minr []         Desc
 
-     --minins []                     Desc
+     --discard_chain_score []        Desc
 
-     --maxins []                     Desc
+     --max_ref_gap []                Desc
 
-     --preseq_assay []               Desc
+     --max_frag_len []               Desc
+
+
+
+
 
      --no_mixed []                   Desc
 
