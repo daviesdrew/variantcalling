@@ -132,6 +132,12 @@ def arg_str_to_dict(arg_str, dict) {
             dict[arg.tokenize()[0].replace('-','')] = arg.tokenize()[1] }
 }
 
+def arg_dict_to_str(dict) {
+    str = ""
+    dict.each{ k, v -> str = str.concat('-'+k+' ').concat(v+' ') }
+    return str
+}
+
 def print_arg_comparison(tool, args, acceptable_args) {
     println("${tool} selected\n")
     println("${tool} args")
@@ -146,10 +152,12 @@ def check_args(tool, tool_args, tool_accept_args) {
     args = check_dict_args(tool_args, tool_arg_keys)
     new_dict = [:]
     new_dict = swap_arg_keys(tool_args, tool_accept_args, new_dict)
-    println("new_dict")
-    println("${new_dict}")
-    
-    return new_dict
+    //println("new_dict")
+    //println("${new_dict}")
+    //println("new string from dict")
+    str = arg_dict_to_str(new_dict)
+    //println("${str}")   
+    return str
 }
 
 
@@ -159,31 +167,32 @@ def check_args(tool, tool_args, tool_accept_args) {
 
 def input_validation(tool_type, tool_args) {
     tool = params[tool_type]
+    args = null
     switch(tool_type) {
             
             case 'align':
                 args = check_aligner(tool)
-                println("Args with cmd specific options")
-                println("${args}")
-
                 //check_sys_for_aligner(tool)
                 break;
 
             case 'variant': 
-                check_variant_caller(tool)
+                args = check_variant_caller(tool)
                 //check_sys_for_variant_caller(tool)
                 break;
 
             case 'filter':
-                check_filter(tool)
+                args = check_filter(tool)
                 //check_sys_for_filter(tool)
                 break;
         
             case 'consensus':
-                check_consensus(tool)
+                args = check_consensus(tool)
                 //check_sys_for_consensus(tool)
                 break;
     }
+    println("Args with cmd specific options")
+    println("${args}")
+
 }
 //----------------------------------------
 
@@ -206,10 +215,10 @@ def check_aligner(aligner) {
     if (aligner == null) 
         aligner = 'bwa'
 
-    return check_args(aligner, 
-                      align_args,
-                      acceptable_args[aligner])
-   
+    check_args(aligner, 
+               align_args,
+               acceptable_args[aligner])
+    return str
 }
 //----------------------------------------
 
