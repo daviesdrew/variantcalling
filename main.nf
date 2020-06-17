@@ -169,7 +169,27 @@ def helpMessage() {
 
 
    ${c_bul}Freebayes Variant Caller Options:${c_reset}
+     --use_ref_allele []             Desc ': '-use-reference-allele', //freebayes --use-reference-allele
+    --theta []                       Desc ': '-theta', //freebayes --theta [num]
     
+    --ploidy []                      Desc ': '-ploidy', //freebayes --ploidy [int]
+    
+    --nbest_allele []                Desc ': '-use-best-n-alleles', //freebayes -use-best-n-alleles [int]
+    
+    --max_cmplx_gap []               Desc ': '-mask-complex-gap', //freebayes --max-complex-gap [int]
+    
+    --haplo_len []                   Desc ': '-haplotype-length', //freebayes --haplotype-length [int]
+
+    --min_rep_size []                Desc ': '-min-repeat-size', //freebayes --min-repeat-size [int]
+    
+    --min_rep_entropy []             Desc ': '-min-repeat-entropy', //freebayes --min-repeat-entropy [int]
+    
+    --no_part_obs []                 Desc ': '-no-partial-observations', //freebayes --no-partial-observations 
+    
+    --use_dup_reads []               Desc ': '-use-duplicate-reads', //freebayes --use-duplicate-reads
+    
+    --base_qual_cap []               Desc ': '-base-quality-cap', //freebayes --base-quality-cap [Q]
+
     
     
     """.stripIndent()
@@ -260,6 +280,19 @@ params.minimap2_args = [
 //----------------------------------------
 
 params.freebayes_args = [ 
+    'use_ref_allele': '-use-reference-allele', //freebayes --use-reference-allele
+    'theta': '-theta', //freebayes --theta [num]
+    'ploidy': '-ploidy', //freebayes --ploidy [int]
+    'nbest_allele': '-use-best-n-alleles', //freebayes -use-best-n-alleles [int]
+    'max_cmplx_gap': '-mask-complex-gap', //freebayes --max-complex-gap [int]
+    'haplo_len': '-haplotype-length', //freebayes --haplotype-length [int]
+    'min_rep_size': '-min-repeat-size', //freebayes --min-repeat-size [int]
+    'min_rep_entropy': '-min-repeat-entropy', //freebayes --min-repeat-entropy [int]
+    'no_part_obs': '-no-partial-observations', //freebayes --no-partial-observations 
+    'use_dup_reads': '-use-duplicate-reads', //freebayes --use-duplicate-reads
+    'base_qual_cap': '-base-quality-cap', //freebayes --base-quality-cap [Q]
+
+    
     'key': 'one' 
 ]
 
@@ -749,7 +782,8 @@ process BWA {
     
     output:
         file "${sample_id}_bwa_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'align'
+        tuple val(sample_id), path(align), 
+              path(ref), emit: 'align'
     
     echo true
     
@@ -782,7 +816,8 @@ process BOWTIE2 {
 
     output:
         file "${sample_id}_bowtie2_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'align'
+        tuple val(sample_id), path(align), 
+              path(ref), emit: 'align'
 
     script:
         index_dir = "./index"
@@ -846,7 +881,8 @@ process MINIMAP2 {
     
     output:
         file "${sample_id}_minimap2_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'align'
+        tuple val(sample_id), path(align), 
+              path(ref), emit: 'align'
     
     script:
         align = "${sample_id}_minimap2_align_pe.sam"
@@ -870,11 +906,12 @@ process SAMTOBAM {
                 pattern: "*.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align) 
+        tuple val(sample_id), path(align), path(ref) 
 
     output:
-        tuple val(sample_id), path(align_bam), val(method), 
-                emit: 'align'
+        tuple val(sample_id), path(align_bam), 
+              val(method), path(ref),
+              emit: 'align'
         
     script: 
         method = "${align}".split('_')[1]
@@ -898,11 +935,13 @@ process BAMSORT {
                 pattern: "*.sorted.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align), val(method)
+        tuple val(sample_id), path(align), 
+              val(method), path(ref)
 
     output:
-        tuple val(sample_id), path(sorted_bam), val(method),
-                emit: 'align'
+        tuple val(sample_id), path(sorted_bam), 
+              val(method), path(ref), 
+              emit: 'align'
     
     script: 
         sorted_bam = "${sample_id}_${method}_align_pe.sorted.bam"
@@ -925,10 +964,13 @@ process BAMINDEX {
                 pattern: "*.bai", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align), val(method)
+        tuple val(sample_id), path(align), 
+              val(method), path(ref)
 
     output:
-        tuple val(sample_id),  path(align), val(method),
+        //file "${sample_id}_align_pe.bai"
+        tuple val(sample_id),  path(align), 
+              val(method), path(ref),
                 emit: 'align'
     
     script: 
@@ -952,23 +994,28 @@ process FREEBAYES {
     publishDir "${params.outdir}/variant/freebayes",
                 pattern: "${sample_id}*.{txt,vcf}", mode: 'copy'
 
+    echo true 
     input: 
-        file ref
-        tuple val(sample_id), path(bam), val(method)
+        tuple val(sample_id), path(bam), 
+              val(method), path(ref)
 
     output:
         tuple val(sample_id), path(variant), path(ref), 
                 emit: 'variant'
     
     script: 
+        bam = "${params.outdir}"
         variant = "${sample_id}.vcf"
         contamination = "{$sample_id}_contamination.txt"
 
     """
+    echo "hello my world"
+    echo $ref;
     freebayes --gvcf -f $ref $bam \\
     -g 1000 --use-mapping-quality \\
     --contamination-estimates $contamination \\ 
-    --genotype-qualities --vcf $variant 
+    --genotype-qualities --vcf $variant \\
+    -dd
     """
 }
 
@@ -1172,7 +1219,7 @@ workflow {
     BAMINDEX(BAMSORT.out.align)
 
     //freebayes process
-    FREEBAYES(ch_ref, BAMINDEX.out.align)
+    FREEBAYES(BAMINDEX.out.align)
      
     BCFTOOLS_STATS(FREEBAYES.out.variant)
     BCFTOOLS_FILTER(FREEBAYES.out.variant)
