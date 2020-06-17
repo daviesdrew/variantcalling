@@ -57,35 +57,35 @@ def helpMessage() {
     
     
     ${c_bul}BWA Aligner Options:${c_reset}
-      --max_edit_dist []             Desc ': 'n', //bwa aln -n
+      --max_edit_dist []             Desc bwa aln -n
                     
-      --max_gap_opens []             Desc ': 'o', //bwa aln -o
+      --max_gap_opens []             Desc bwa aln -o
                     
-      --max_gap_ext []               Desc ': 'e', //bwa aln -e
+      --max_gap_ext []               Desc bwa aln -e
       
-      --no_long_del []               Desc ': 'd', //bwa aln -d 
+      --no_long_del []               Desc bwa aln -d 
       
-      --limit_indel []               Desc ': 'i', //bwa aln -i
+      --limit_indel []               Desc bwa aln -i
       
-      --subseq_seed []               Desc ': 'l', //bwa aln -l
+      --subseq_seed []               Desc bwa aln -l
       
-      --mismatch_pen []              Desc ': 'M', //bwa aln -M
+      --mismatch_pen []              Desc bwa aln -M
       
-      --gap_open_pen []              Desc ': 'O', //bwa aln -O
+      --gap_open_pen []              Desc bwa aln -O
       
-      --max_seed_edit_dist []        Desc ': 'k', //bwa aln -k
+      --max_seed_edit_dist []        Desc bwa aln -k
       
-      --gap_ext_pen []               Desc ': 'E', //bwa aln -E
+      --gap_ext_pen []               Desc bwa aln -E
+     
+      --max_insert []                Desc bwa sampe -a
       
-      --max_insert []                Desc ': 'a', //bwa sampe -a
+      --max_occur []                 Desc bwa sampe -o
       
-      --max_occur []                 Desc ': 'o', //bwa sampe -o
+      --max_align []                 Desc bwa sampe -n
       
-      --max_align []                 Desc ': 'n', //bwa sampe -n
+      --max_discord []               Desc bwa sampe -N
       
-      --max_discord []               Desc ': 'N', //bwa sampe -N
-      
-      --index_algo []                Desc ': 'a' //bwa index -a
+      --index_algo []                Desc bwa index -a
 
    ${c_bul}Bowtie2 Aligner Options:${c_reset}
      --end_to_end []                 Desc 
@@ -169,29 +169,40 @@ def helpMessage() {
 
 
    ${c_bul}Freebayes Variant Caller Options:${c_reset}
-     --use_ref_allele []             Desc ': '-use-reference-allele', //freebayes --use-reference-allele
-    --theta []                       Desc ': '-theta', //freebayes --theta [num]
+     --use_ref_allele []             Desc freebayes --use-reference-allele
+     
+     --theta []                      Desc freebayes --theta [num]
     
-    --ploidy []                      Desc ': '-ploidy', //freebayes --ploidy [int]
+     --ploidy []                     Desc freebayes --ploidy [int]
     
-    --nbest_allele []                Desc ': '-use-best-n-alleles', //freebayes -use-best-n-alleles [int]
+     --nbest_allele []               Desc freebayes -use-best-n-alleles [int]
+     
+     --max_cmplx_gap []              Desc freebayes --max-complex-gap [int]
     
-    --max_cmplx_gap []               Desc ': '-mask-complex-gap', //freebayes --max-complex-gap [int]
-    
-    --haplo_len []                   Desc ': '-haplotype-length', //freebayes --haplotype-length [int]
+     --haplo_len []                  Desc freebayes --haplotype-length [int]
 
-    --min_rep_size []                Desc ': '-min-repeat-size', //freebayes --min-repeat-size [int]
+     --min_rep_size []               Desc freebayes --min-repeat-size [int]
     
-    --min_rep_entropy []             Desc ': '-min-repeat-entropy', //freebayes --min-repeat-entropy [int]
+     --min_rep_entropy []            Desc freebayes --min-repeat-entropy [int]
     
-    --no_part_obs []                 Desc ': '-no-partial-observations', //freebayes --no-partial-observations 
+     --no_part_obs []                Desc freebayes --no-partial-observations 
     
-    --use_dup_reads []               Desc ': '-use-duplicate-reads', //freebayes --use-duplicate-reads
+     --use_dup_reads []              Desc freebayes --use-duplicate-reads
     
-    --base_qual_cap []               Desc ': '-base-quality-cap', //freebayes --base-quality-cap [Q]
+     --base_qual_cap []              Desc freebayes --base-quality-cap [Q]
+    
+     --min_map_qual []               Desc freebayes --min-mapping-quality [Q]
+    
+     --min_base_qual []              Desc freebayes --min-base-quality [Q]
+    
+     --mismatch_qual_thresh []       Desc freebayes --mismatch-base-quality-threshold [Q]
+    
+     --mismatch_limit []             Desc freebayes --read-mismatch-limit [int]
+    
+     --read_snp_limit []             Desc freebayes --read-snp-limit [int]
+    
+     --read_indel_limit []           Desc freebayes --read-indel-limit [int]
 
-    
-    
     """.stripIndent()
 }
 
@@ -291,9 +302,12 @@ params.freebayes_args = [
     'no_part_obs': '-no-partial-observations', //freebayes --no-partial-observations 
     'use_dup_reads': '-use-duplicate-reads', //freebayes --use-duplicate-reads
     'base_qual_cap': '-base-quality-cap', //freebayes --base-quality-cap [Q]
-
-    
-    'key': 'one' 
+    'min_map_qual': '-min-mapping-quality', //freebayes --min-mapping-quality [Q]
+    'min_base_qual': '-min-base-quality', //freebayes --min-base-quality [Q]
+    'mismatch_qual_thresh': '-mismatch-base-quality-threshold', //freebayes --mismatch-base-quality-threshold [Q]
+    'mismatch_limit': '-read-mismatch-limit', //freebayes --read-mismatch-limit [int]
+    'read_snp_limit': '-read-snp-limit', //freebayes --read-snp-limit [int]
+    'read_indel_limit': '-read-indel-limit' //freebayes --read-indel-limit [int]
 ]
 
 //----------------------------------------
