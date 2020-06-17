@@ -57,35 +57,35 @@ def helpMessage() {
     
     
     ${c_bul}BWA Aligner Options:${c_reset}
-      --max_edit_dist []             Desc ': 'n', //bwa aln -n
+      --max_edit_dist []             Desc bwa aln -n
                     
-      --max_gap_opens []             Desc ': 'o', //bwa aln -o
+      --max_gap_opens []             Desc bwa aln -o
                     
-      --max_gap_ext []               Desc ': 'e', //bwa aln -e
+      --max_gap_ext []               Desc bwa aln -e
       
-      --no_long_del []               Desc ': 'd', //bwa aln -d 
+      --no_long_del []               Desc bwa aln -d 
       
-      --limit_indel []               Desc ': 'i', //bwa aln -i
+      --limit_indel []               Desc bwa aln -i
       
-      --subseq_seed []               Desc ': 'l', //bwa aln -l
+      --subseq_seed []               Desc bwa aln -l
       
-      --mismatch_pen []              Desc ': 'M', //bwa aln -M
+      --mismatch_pen []              Desc bwa aln -M
       
-      --gap_open_pen []              Desc ': 'O', //bwa aln -O
+      --gap_open_pen []              Desc bwa aln -O
       
-      --max_seed_edit_dist []        Desc ': 'k', //bwa aln -k
+      --max_seed_edit_dist []        Desc bwa aln -k
       
-      --gap_ext_pen []               Desc ': 'E', //bwa aln -E
+      --gap_ext_pen []               Desc bwa aln -E
+     
+      --max_insert []                Desc bwa sampe -a
       
-      --max_insert []                Desc ': 'a', //bwa sampe -a
+      --max_occur []                 Desc bwa sampe -o
       
-      --max_occur []                 Desc ': 'o', //bwa sampe -o
+      --max_align []                 Desc bwa sampe -n
       
-      --max_align []                 Desc ': 'n', //bwa sampe -n
+      --max_discord []               Desc bwa sampe -N
       
-      --max_discord []               Desc ': 'N', //bwa sampe -N
-      
-      --index_algo []                Desc ': 'a' //bwa index -a
+      --index_algo []                Desc bwa index -a
 
    ${c_bul}Bowtie2 Aligner Options:${c_reset}
      --end_to_end []                 Desc 
@@ -153,13 +153,55 @@ def helpMessage() {
 
      --rev_only []                   Desc
 
-     --no_mixed []                   Desc
+     --match_score []                Desc
 
-     --no_contain []                 Desc
+     --mismatch_pen []               Desc
 
-     --no_lap []                     Desc
+     --gap_open_pen []               Desc
 
-     --qc_filter []                  Desc
+     --gap_ext_pen []                Desc
+
+     --non_canonical []              Desc
+
+     --end_bonus []                  Desc
+
+     --ambig_mismatch []             Desc
+
+
+   ${c_bul}Freebayes Variant Caller Options:${c_reset}
+     --use_ref_allele []             Desc freebayes --use-reference-allele
+     
+     --theta []                      Desc freebayes --theta [num]
+    
+     --ploidy []                     Desc freebayes --ploidy [int]
+    
+     --nbest_allele []               Desc freebayes -use-best-n-alleles [int]
+     
+     --max_cmplx_gap []              Desc freebayes --max-complex-gap [int]
+    
+     --haplo_len []                  Desc freebayes --haplotype-length [int]
+
+     --min_rep_size []               Desc freebayes --min-repeat-size [int]
+    
+     --min_rep_entropy []            Desc freebayes --min-repeat-entropy [int]
+    
+     --no_part_obs []                Desc freebayes --no-partial-observations 
+    
+     --use_dup_reads []              Desc freebayes --use-duplicate-reads
+    
+     --base_qual_cap []              Desc freebayes --base-quality-cap [Q]
+    
+     --min_map_qual []               Desc freebayes --min-mapping-quality [Q]
+    
+     --min_base_qual []              Desc freebayes --min-base-quality [Q]
+    
+     --mismatch_qual_thresh []       Desc freebayes --mismatch-base-quality-threshold [Q]
+    
+     --mismatch_limit []             Desc freebayes --read-mismatch-limit [int]
+    
+     --read_snp_limit []             Desc freebayes --read-snp-limit [int]
+    
+     --read_indel_limit []           Desc freebayes --read-indel-limit [int]
 
     """.stripIndent()
 }
@@ -249,7 +291,23 @@ params.minimap2_args = [
 //----------------------------------------
 
 params.freebayes_args = [ 
-    'key': 'one' 
+    'use_ref_allele': '-use-reference-allele', //freebayes --use-reference-allele
+    'theta': '-theta', //freebayes --theta [num]
+    'ploidy': '-ploidy', //freebayes --ploidy [int]
+    'nbest_allele': '-use-best-n-alleles', //freebayes -use-best-n-alleles [int]
+    'max_cmplx_gap': '-mask-complex-gap', //freebayes --max-complex-gap [int]
+    'haplo_len': '-haplotype-length', //freebayes --haplotype-length [int]
+    'min_rep_size': '-min-repeat-size', //freebayes --min-repeat-size [int]
+    'min_rep_entropy': '-min-repeat-entropy', //freebayes --min-repeat-entropy [int]
+    'no_part_obs': '-no-partial-observations', //freebayes --no-partial-observations 
+    'use_dup_reads': '-use-duplicate-reads', //freebayes --use-duplicate-reads
+    'base_qual_cap': '-base-quality-cap', //freebayes --base-quality-cap [Q]
+    'min_map_qual': '-min-mapping-quality', //freebayes --min-mapping-quality [Q]
+    'min_base_qual': '-min-base-quality', //freebayes --min-base-quality [Q]
+    'mismatch_qual_thresh': '-mismatch-base-quality-threshold', //freebayes --mismatch-base-quality-threshold [Q]
+    'mismatch_limit': '-read-mismatch-limit', //freebayes --read-mismatch-limit [int]
+    'read_snp_limit': '-read-snp-limit', //freebayes --read-snp-limit [int]
+    'read_indel_limit': '-read-indel-limit' //freebayes --read-indel-limit [int]
 ]
 
 //----------------------------------------
@@ -332,12 +390,7 @@ def check_args(tool, tool_args, tool_accept_args) {
     args = check_dict_args(tool_args, tool_arg_keys)
     new_dict = [:]
     new_dict = swap_arg_keys(tool_args, tool_accept_args, new_dict)
-    //println("new_dict")
-    //println("${new_dict}")
-    //println("new string from dict")
-    str = arg_dict_to_str(new_dict)
-    //println("${str}")   
-    return str
+    return arg_dict_to_str(new_dict)
 }
 
 
@@ -349,30 +402,34 @@ def input_validation(tool_type, tool_args) {
     tool = params[tool_type]
     args = null
     switch(tool_type) {
-            
             case 'align':
-                args = check_aligner(tool)
+                check_aligner(tool)
+                println("Args for align process")
+                println("${params.align_args_str}")
                 //check_sys_for_aligner(tool)
                 break;
 
             case 'variant': 
-                args = check_variant_caller(tool)
+                check_variant_caller(tool)
+                println("Args for variant calling process")
+                println("${params.variant_args_str}")
                 //check_sys_for_variant_caller(tool)
                 break;
 
             case 'filter':
-                args = check_filter(tool)
+                check_filter(tool)
+                println("Args for filter process")
+                println("${params.filter_args_str}")
                 //check_sys_for_filter(tool)
                 break;
         
             case 'consensus':
-                args = check_consensus(tool)
+                check_consensus(tool)
+                println("Args for consensus process")
+                println("${params.consensus_args_str}")
                 //check_sys_for_consensus(tool)
                 break;
     }
-    println("Args with cmd specific options")
-    println("${args}")
-
 }
 //----------------------------------------
 
@@ -395,10 +452,9 @@ def check_aligner(aligner) {
     if (aligner == null) 
         aligner = 'bwa'
 
-    check_args(aligner, 
-               align_args,
-               acceptable_args[aligner])
-    return str
+    params.align_args_str = check_args(aligner, 
+                                       align_args,
+                                       acceptable_args[aligner])
 }
 //----------------------------------------
 
@@ -417,9 +473,9 @@ def check_variant_caller(variant_caller) {
     if(variant_caller == null) 
         variant_valler = 'freebayes'
 
-    return check_args(variant_caller,
-                      variant_caller_args,
-                      acceptable_args[variant_caller])
+    params.variant_args_str = check_args(variant_caller,
+                                         variant_caller_args,
+                                         acceptable_args[variant_caller])
 }
 //----------------------------------------
 
@@ -435,9 +491,9 @@ def check_filter(filter) {
         'bcftools': params.bcftools_filter_args
     ]
     
-    return check_args(filter,
-                      filter_args,
-                      acceptable_args[filter])
+    params.filter_args_str = check_args(filter,
+                                        filter_args,
+                                        acceptable_args[filter])
 }
 
 //----------------------------------------
@@ -461,9 +517,9 @@ def check_consensus(consensus) {
     if (consensus == null)
         consensus = 'bcftools'
     
-    return check_args(consensus,
-                      consensus_args,
-                      acceptable_args[consensus])
+    params.consensus_args_str = check_args(consensus,
+                                           consensus_args,
+                                           acceptable_args[consensus])
 }
 //----------------------------------------
 
@@ -749,6 +805,7 @@ process BWA {
         args = "${params.align_args}"
       
     """
+    echo $ref
     echo $args
     bwa index -a bwtsw $ref;
     bwa sampe -P $ref $r2_sai $r2_sai $r1 $r2 > $align;
@@ -861,11 +918,11 @@ process SAMTOBAM {
                 pattern: "*.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align) 
+        tuple val(sample_id), path(align)
 
     output:
-        tuple val(sample_id), path(align_bam), val(method), 
-                emit: 'align'
+        tuple val(sample_id), path(align_bam), 
+              val(method), emit: 'align'
         
     script: 
         method = "${align}".split('_')[1]
@@ -892,8 +949,8 @@ process BAMSORT {
         tuple val(sample_id), path(align), val(method)
 
     output:
-        tuple val(sample_id), path(sorted_bam), val(method),
-                emit: 'align'
+        tuple val(sample_id), path(sorted_bam), 
+              val(method), emit: 'align'
     
     script: 
         sorted_bam = "${sample_id}_${method}_align_pe.sorted.bam"
@@ -912,18 +969,19 @@ process BAMSORT {
 
 process BAMINDEX {
     tag "$sample_id"
-    publishDir "${params.outdir}/samconvert",
+    publishDir "${params.outdir}/samconvert/${method}",
                 pattern: "*.bai", mode: "copy"
 
     input: 
         tuple val(sample_id), path(align), val(method)
 
     output:
-        tuple val(sample_id),  path(align), val(method),
-                emit: 'align'
+        file "${sample_id}_${method}_align_pe.bai"
+        tuple val(sample_id),  path(align), 
+              val(method), emit: 'align'
     
     script: 
-        indexed_bam = "${sample_id}_align_pe.bai"
+        indexed_bam = "${sample_id}_${method}_align_pe.bai"
 
     """
     samtools index $align $indexed_bam
@@ -941,8 +999,10 @@ process BAMINDEX {
 process FREEBAYES {
     tag "$sample_id"
     publishDir "${params.outdir}/variant/freebayes",
-                pattern: "*.vcf", mode: 'copy'
-
+                pattern: "${sample_id}*.vcf", mode: 'copy'
+    publishDir "${params.outdir}/variant/freebayes", 
+                pattern: "${sample_id}*.txt", mode: 'copy'
+    echo true 
     input: 
         file ref
         tuple val(sample_id), path(bam), val(method)
@@ -953,10 +1013,15 @@ process FREEBAYES {
     
     script: 
         variant = "${sample_id}.vcf"
+        contamination = "${sample_id}_contamination.txt"
 
     """
-    freebayes -f $ref $bam > $variant
+    freebayes --gvcf --use-mapping-quality \\
+    --genotype-qualities \\
+    -f $ref -g 1000 \\
+     $bam > $variant 
     """
+    //--contamination-estimates $contamination \\ 
 }
 
 //----------------------------------------
