@@ -796,8 +796,7 @@ process BWA {
     
     output:
         file "${sample_id}_bwa_align_pe.sam"
-        tuple val(sample_id), path(align), 
-              path(ref), emit: 'align'
+        tuple val(sample_id), path(align), emit: 'align'
     
     echo true
     
@@ -831,8 +830,7 @@ process BOWTIE2 {
 
     output:
         file "${sample_id}_bowtie2_align_pe.sam"
-        tuple val(sample_id), path(align), 
-              path(ref), emit: 'align'
+        tuple val(sample_id), path(align), emit: 'align'
 
     script:
         index_dir = "./index"
@@ -896,8 +894,7 @@ process MINIMAP2 {
     
     output:
         file "${sample_id}_minimap2_align_pe.sam"
-        tuple val(sample_id), path(align), 
-              path(ref), emit: 'align'
+        tuple val(sample_id), path(align), emit: 'align'
     
     script:
         align = "${sample_id}_minimap2_align_pe.sam"
@@ -921,12 +918,11 @@ process SAMTOBAM {
                 pattern: "*.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align), path(ref) 
+        tuple val(sample_id), path(align)
 
     output:
         tuple val(sample_id), path(align_bam), 
-              val(method), path(ref),
-              emit: 'align'
+              val(method), emit: 'align'
         
     script: 
         method = "${align}".split('_')[1]
@@ -950,13 +946,11 @@ process BAMSORT {
                 pattern: "*.sorted.bam", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align), 
-              val(method), path(ref)
+        tuple val(sample_id), path(align), val(method)
 
     output:
         tuple val(sample_id), path(sorted_bam), 
-              val(method), path(ref), 
-              emit: 'align'
+              val(method), emit: 'align'
     
     script: 
         sorted_bam = "${sample_id}_${method}_align_pe.sorted.bam"
@@ -979,8 +973,7 @@ process BAMINDEX {
                 pattern: "*.bai", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align), 
-              val(method), path(ref)
+        tuple val(sample_id), path(align), val(method)
 
     output:
         file "${sample_id}_${method}_align_pe.bai"
@@ -1006,8 +999,9 @@ process BAMINDEX {
 process FREEBAYES {
     tag "$sample_id"
     publishDir "${params.outdir}/variant/freebayes",
-                pattern: "${sample_id}*.{txt,vcf}", mode: 'copy'
-
+                pattern: "${sample_id}*.vcf", mode: 'copy'
+    publishDir "${params.outdir}/variant/freebayes", 
+                pattern: "${sample_id}*.txt", mode: 'copy'
     echo true 
     input: 
         file ref
@@ -1022,12 +1016,12 @@ process FREEBAYES {
         contamination = "${sample_id}_contamination.txt"
 
     """
-    freebayes --gvcf -f $ref $bam \\
-    -g 1000 --use-mapping-quality \\
-    --contamination-estimates $contamination \\ 
-    --genotype-qualities --vcf $variant \\
-    -dd
+    freebayes --gvcf --use-mapping-quality \\
+    --genotype-qualities \\
+    -f $ref -g 1000 \\
+     $bam > $variant 
     """
+    //--contamination-estimates $contamination \\ 
 }
 
 //----------------------------------------
