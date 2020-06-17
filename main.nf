@@ -153,14 +153,25 @@ def helpMessage() {
 
      --rev_only []                   Desc
 
-     --no_mixed []                   Desc
+     --match_score []                Desc
 
-     --no_contain []                 Desc
+     --mismatch_pen []               Desc
 
-     --no_lap []                     Desc
+     --gap_open_pen []               Desc
 
-     --qc_filter []                  Desc
+     --gap_ext_pen []                Desc
 
+     --non_canonical []              Desc
+
+     --end_bonus []                  Desc
+
+     --ambig_mismatch []             Desc
+
+
+   ${c_bul}Freebayes Variant Caller Options:${c_reset}
+    
+    
+    
     """.stripIndent()
 }
 
@@ -332,12 +343,7 @@ def check_args(tool, tool_args, tool_accept_args) {
     args = check_dict_args(tool_args, tool_arg_keys)
     new_dict = [:]
     new_dict = swap_arg_keys(tool_args, tool_accept_args, new_dict)
-    //println("new_dict")
-    //println("${new_dict}")
-    //println("new string from dict")
-    str = arg_dict_to_str(new_dict)
-    //println("${str}")   
-    return str
+    return arg_dict_to_str(new_dict)
 }
 
 
@@ -349,30 +355,34 @@ def input_validation(tool_type, tool_args) {
     tool = params[tool_type]
     args = null
     switch(tool_type) {
-            
             case 'align':
-                args = check_aligner(tool)
+                check_aligner(tool)
+                println("Args for align process")
+                println("${params.align_args_str}")
                 //check_sys_for_aligner(tool)
                 break;
 
             case 'variant': 
-                args = check_variant_caller(tool)
+                check_variant_caller(tool)
+                println("Args for variant calling process")
+                println("${params.variant_args_str}")
                 //check_sys_for_variant_caller(tool)
                 break;
 
             case 'filter':
-                args = check_filter(tool)
+                check_filter(tool)
+                println("Args for filter process")
+                println("${params.filter_args_str}")
                 //check_sys_for_filter(tool)
                 break;
         
             case 'consensus':
-                args = check_consensus(tool)
+                check_consensus(tool)
+                println("Args for consensus process")
+                println("${params.consensus_args_str}")
                 //check_sys_for_consensus(tool)
                 break;
     }
-    println("Args with cmd specific options")
-    println("${args}")
-
 }
 //----------------------------------------
 
@@ -395,10 +405,9 @@ def check_aligner(aligner) {
     if (aligner == null) 
         aligner = 'bwa'
 
-    check_args(aligner, 
-               align_args,
-               acceptable_args[aligner])
-    return str
+    params.align_args_str = check_args(aligner, 
+                                       align_args,
+                                       acceptable_args[aligner])
 }
 //----------------------------------------
 
@@ -417,9 +426,9 @@ def check_variant_caller(variant_caller) {
     if(variant_caller == null) 
         variant_valler = 'freebayes'
 
-    return check_args(variant_caller,
-                      variant_caller_args,
-                      acceptable_args[variant_caller])
+    params.variant_args_str = check_args(variant_caller,
+                                         variant_caller_args,
+                                         acceptable_args[variant_caller])
 }
 //----------------------------------------
 
@@ -435,9 +444,9 @@ def check_filter(filter) {
         'bcftools': params.bcftools_filter_args
     ]
     
-    return check_args(filter,
-                      filter_args,
-                      acceptable_args[filter])
+    params.filter_args_str = check_args(filter,
+                                        filter_args,
+                                        acceptable_args[filter])
 }
 
 //----------------------------------------
@@ -461,9 +470,9 @@ def check_consensus(consensus) {
     if (consensus == null)
         consensus = 'bcftools'
     
-    return check_args(consensus,
-                      consensus_args,
-                      acceptable_args[consensus])
+    params.consensus_args_str = check_args(consensus,
+                                           consensus_args,
+                                           acceptable_args[consensus])
 }
 //----------------------------------------
 
