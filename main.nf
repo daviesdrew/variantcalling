@@ -806,6 +806,7 @@ process BWA {
         args = "${params.align_args}"
       
     """
+    echo $ref
     echo $args
     bwa index -a bwtsw $ref;
     bwa sampe -P $ref $r2_sai $r2_sai $r1 $r2 > $align;
@@ -974,7 +975,7 @@ process BAMSORT {
 
 process BAMINDEX {
     tag "$sample_id"
-    publishDir "${params.outdir}/samconvert",
+    publishDir "${params.outdir}/samconvert/${method}",
                 pattern: "*.bai", mode: "copy"
 
     input: 
@@ -982,13 +983,12 @@ process BAMINDEX {
               val(method), path(ref)
 
     output:
-        //file "${sample_id}_align_pe.bai"
+        file "${sample_id}_${method}_align_pe.bai"
         tuple val(sample_id),  path(align), 
-              val(method), path(ref),
-                emit: 'align'
+              val(method), emit: 'align'
     
     script: 
-        indexed_bam = "${sample_id}_align_pe.bai"
+        indexed_bam = "${sample_id}_${method}_align_pe.bai"
 
     """
     samtools index $align $indexed_bam
@@ -1010,21 +1010,18 @@ process FREEBAYES {
 
     echo true 
     input: 
-        tuple val(sample_id), path(bam), 
-              val(method), path(ref)
+        file ref
+        tuple val(sample_id), path(bam), val(method)
 
     output:
         tuple val(sample_id), path(variant), path(ref), 
                 emit: 'variant'
     
     script: 
-        bam = "${params.outdir}"
         variant = "${sample_id}.vcf"
-        contamination = "{$sample_id}_contamination.txt"
+        contamination = "${sample_id}_contamination.txt"
 
     """
-    echo "hello my world"
-    echo $ref;
     freebayes --gvcf -f $ref $bam \\
     -g 1000 --use-mapping-quality \\
     --contamination-estimates $contamination \\ 
@@ -1233,7 +1230,7 @@ workflow {
     BAMINDEX(BAMSORT.out.align)
 
     //freebayes process
-    FREEBAYES(BAMINDEX.out.align)
+    FREEBAYES(ch_ref, BAMINDEX.out.align)
      
     BCFTOOLS_STATS(FREEBAYES.out.variant)
     BCFTOOLS_FILTER(FREEBAYES.out.variant)
