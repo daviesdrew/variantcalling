@@ -950,7 +950,7 @@ process BAMINDEX {
 process FREEBAYES {
     tag "$sample_id"
     publishDir "${params.outdir}/variant/freebayes",
-                pattern: "*.vcf", mode: 'copy'
+                pattern: "${sample_id}*.{txt,vcf}", mode: 'copy'
 
     input: 
         file ref
@@ -962,9 +962,13 @@ process FREEBAYES {
     
     script: 
         variant = "${sample_id}.vcf"
+        contamination = "{$sample_id}_contamination.txt"
 
     """
-    freebayes -f $ref $bam > $variant
+    freebayes --gvcf -f $ref $bam \\
+    -g 1000 --use-mapping-quality \\
+    --contamination-estimates $contamination \\ 
+    --genotype-qualities --vcf $variant 
     """
 }
 
