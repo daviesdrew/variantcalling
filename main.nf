@@ -317,7 +317,15 @@ params.freebayes_args = [
 //----------------------------------------
 
 params.bcftools_filter_args = [
-    'key': 'one'
+    'soft_filter': '-soft-filter', // bcftools filter --soft-filter [string]
+    
+    'set_GTs': '-set-GTs', //bcftools filter --set-GTs [.|0]
+    
+    'snp_gap': '-SnpGap', //bcftools filter --SnpGap [int]
+
+    'indel_gap': '-IndelGap', //bcftools filter --IndelGap [int]
+
+    'mode': '-mode' //bcftools filter --mode [+x]
 ]
 //----------------------------------------
 
@@ -1067,15 +1075,16 @@ process BCFTOOLS_FILTER {
         tuple val(sample_id), path(variant), path(ref)
 
     output:
-        tuple val(sample_id), path(variant),
+        tuple val(sample_id), path(filtered),
                 emit: 'variant'
         file "${sample_id}_filtered.vcf"
             
     script: 
+        options = ""
         filtered = "${sample_id}_filtered.vcf"
 
     """
-    bcftools stats $variant > $filtered; 
+    bcftools filter $options $variant > $filtered; 
     
     """
 }
