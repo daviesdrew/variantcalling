@@ -334,7 +334,11 @@ params.freebayes_args = [
 //----------------------------------------
 
 params.bcftools_filter_args = [
-    'soft_filter': '-soft-filter', // bcftools filter --soft-filter [string]
+    'include': '-include', //bcftools filter --include [expr]
+
+    'exclude': '-exclude', //bcftools filter --exclude [expr]
+
+    'soft_filter': '-soft-filter', //bcftools filter --soft-filter [string]
     
     'set_GTs': '-set-GTs', //bcftools filter --set-GTs [.|0]
     
@@ -1145,7 +1149,7 @@ process BCFTOOLS_FILTER {
         file "${sample_id}_filtered.vcf"
             
     script: 
-        options = ""
+        options = "${params.filter_args_str}"
         filtered = "${sample_id}_filtered.vcf"
 
     """
@@ -1307,7 +1311,7 @@ workflow {
 
         FREEBAYES(ch_ref, BAMINDEX.out.align)
     
-    else {
+    } else {
     
         FREEBAYES(ch_ref, BAMINDEX.out.align)
     
