@@ -203,6 +203,23 @@ def helpMessage() {
     
      --read_indel_limit []           Desc freebayes --read-indel-limit [int]
 
+   ${c_bul}Freebayes Variant Caller Options:${c_reset}
+     --soft_filter                   Desc bcftools filter --soft-filter [string]
+    
+    --set_GTs                        Desc bcftools filter --set-GTs [.|0]
+    
+    --snp_gap                        Desc bcftools filter --SnpGap [int]
+
+    --indel_gap                      Desc bcftools filter --IndelGap [int]
+
+    --mode                           Desc bcftools filter --mode [+x]
+
+   ${c_bul}SnpEff Gene Prediction Options:${c_reset}
+    
+    
+    
+    
+    
     """.stripIndent()
 }
 
@@ -330,6 +347,23 @@ params.bcftools_filter_args = [
 //----------------------------------------
 
 //----------------------------------------
+// CONSTANT VALUES: PREDICTION
+//----------------------------------------
+
+params.snpeff_args = [
+    'soft_filter': '-soft-filter', // bcftools filter --soft-filter [string]
+    
+    'set_GTs': '-set-GTs', //bcftools filter --set-GTs [.|0]
+    
+    'snp_gap': '-SnpGap', //bcftools filter --SnpGap [int]
+
+    'indel_gap': '-IndelGap', //bcftools filter --IndelGap [int]
+
+    'mode': '-mode' //bcftools filter --mode [+x]
+]
+//----------------------------------------
+
+//----------------------------------------
 // CONSTANT VALUES: CONSENSUSES 
 //----------------------------------------
 
@@ -413,28 +447,35 @@ def input_validation(tool_type, tool_args) {
             case 'align':
                 check_aligner(tool)
                 println("Args for align process")
-                println("${params.align_args_str}")
+                println("${params.align_args_str}\n")
                 //check_sys_for_aligner(tool)
                 break;
 
             case 'variant': 
                 check_variant_caller(tool)
                 println("Args for variant calling process")
-                println("${params.variant_args_str}")
+                println("${params.variant_args_str}\n")
                 //check_sys_for_variant_caller(tool)
                 break;
 
             case 'filter':
                 check_filter(tool)
                 println("Args for filter process")
-                println("${params.filter_args_str}")
+                println("${params.filter_args_str}\n")
                 //check_sys_for_filter(tool)
                 break;
         
+            case 'prediction':
+                check_prediction(tool)
+                println("Args for prediction process")
+                println("${params.prediction_args_str}\n")
+                //check_sys_for_prediction(tool)
+                break;
+
             case 'consensus':
                 check_consensus(tool)
                 println("Args for consensus process")
-                println("${params.consensus_args_str}")
+                println("${params.consensus_args_str}\n")
                 //check_sys_for_consensus(tool)
                 break;
     }
@@ -507,6 +548,29 @@ def check_filter(filter) {
 //----------------------------------------
 
 //----------------------------------------
+// HELPER FUNCTIONS: CHECK PREDICTION ARGS 
+//----------------------------------------
+def check_prediction(prediction) {
+    println("Checking prediction tool arguments")
+    prediction_args = [:]
+    arg_str_to_dict(params.prediction_args, prediction_args)
+    
+    acceptable_args = [
+        'snpeff': params.snpeff_args
+    ]
+    println("before check_args") 
+    print_arg_comparison(prediction, 
+                          prediction_args, 
+                          acceptable_args[prediction])
+     
+    params.prediction_args_str = check_args(prediction,
+                                            prediction_args,
+                                            acceptable_args[prediction])
+}
+
+//----------------------------------------
+
+//----------------------------------------
 // HELPER FUNCTIONS: CHECK CONSENSUS ARGS
 //----------------------------------------
 def check_consensus(consensus) {
@@ -538,6 +602,7 @@ def check_consensus(consensus) {
 arguments = [ 'align': 'align_args', 
               'variant': 'variant_args',
               'filter': 'filter_args',
+              'prediction': 'prediction_args',
               'consensus': 'consensus_args' ] 
 
 arguments.each{ k, v -> check_arg_existence(k, v) }
@@ -1054,7 +1119,7 @@ process BCFTOOLS_STATS {
         stats = "${sample_id}_stats.txt"
 
     """
-    bcftools stats -F $ref $variant > $stats; 
+    bcftools stats -F $ref $variant -v > $stats; 
     
     """
 }
@@ -1084,7 +1149,7 @@ process BCFTOOLS_FILTER {
         filtered = "${sample_id}_filtered.vcf"
 
     """
-    bcftools filter $options $variant > $filtered; 
+    bcftools filter $options $variant -o $filtered; 
     
     """
 }
