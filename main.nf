@@ -792,40 +792,6 @@ process FASTQC {
 //----------------------------------------
 
 //----------------------------------------
-// PROCESSES: BWAINDEX 
-// Build the reference genome index
-//----------------------------------------
-
-process BWAINDEX {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}", 
-                pattern: "*.sai", mode: 'copy'
-    publishDir "${params.outdir}/align/bwa/index",
-                pattern: "ref.fa.*", mode: 'copy'
-    input:
-        file ref            
-        tuple val(sample_id), path(r1), path(r2)
-    
-    output:
-        file "${sample_id}_1.sai"
-        file "${sample_id}_2.sai"
-        tuple val(sample_id), path(r1), path(r2), path(r1_sai), path(r2_sai),
-                emit: 'reads'
-    
-    script:
-        r1_sai = "${sample_id}_1.sai"
-        r2_sai = "${sample_id}_2.sai"
-
-    """
-    bwa index -a bwtsw $ref;
-    bwa aln -t ${task.cpus} -I $ref $r1 > $r1_sai;
-    bwa aln -t ${task.cpus} -I $ref $r2 > $r2_sai;
-    """
-}
-
-//----------------------------------------
-
-//----------------------------------------
 // PROCESSES: BWA 
 // Paired End read alignment 
 // Utilizes reference genome
@@ -834,32 +800,34 @@ process BWAINDEX {
 process BWA {
     tag "$sample_id"
     publishDir "${params.outdir}/align/${params.align}",
-                pattern: "*.sam", mode: 'copy'
-    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: 'copy'
+    publishDir "${params.outdir}/align/${params.align}", 
+                pattern: "*.sai", mode: 'copy'
 
     input:
         file ref            
-        tuple val(sample_id), path(r1), path(r2), path(r1_sai), path(r2_sai)
+        tuple val(sample_id), path(r1), path(r2)
     
     output:
+        file "${sample_id}_1.sai"
+        file "${sample_id}_2.sai"
         tuple val(sample_id), path(bam), emit: 'align'
     
     echo true
     
     script:
+        r1_sai = "${sample_id}_1.sai"
+        r2_sai = "${sample_id}_2.sai"
         align = "${sample_id}_${params.align}_align_pe.sam"
         bam = "${sample_id}_${params.align}_align_pe.bam"
-        args = "${params.align_args}"
       
     """
-    echo $ref
-    echo $args
     bwa index -a bwtsw $ref;
+    bwa aln -t ${task.cpus} -I $ref $r1 > $r1_sai;
+    bwa aln -t ${task.cpus} -I $ref $r2 > $r2_sai;
     bwa sampe -P $ref $r2_sai $r2_sai $r1 $r2 > $align \\
     | samtools sort -@${task.cpus} \\
     | samtools view -F4 -b -o $bam \\
-    
     """
 }
 
@@ -1181,8 +1149,7 @@ workflow {
     
     } else {
         
-        BWAINDEX(ch_ref, FASTP.out.reads)
-        BWA(ch_ref, BWAINDEX.out.reads)
+        BWA(ch_ref, FASTP.out.reads)
         BAMINDEX(BWA.out.align)
     }
     
