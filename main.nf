@@ -921,37 +921,6 @@ process BOWTIE2 {
     bowtie2 --threads ${task.cpus} -x $indexes -1 $r1 -2 $r2 -S $align;
     """
 }
-
-//----------------------------------------
-
-//----------------------------------------
-// PROCESSES: FASTQTOFASTA
-// Convert fastq files to fasta files 
-//----------------------------------------
-
-process FASTQTOFASTA {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/minimap2",
-                pattern: "*.fasta", mode: 'copy'
-
-    input:
-        tuple val(sample_id), path(r1), path(r2)
-    
-    output:
-        tuple val(sample_id), path(r1_fasta), path(r2_fasta),
-                emit: 'reads'
-    
-    script:
-        r1_fasta = "${sample_id}_1.fastp.fasta"
-        r2_fasta = "${sample_id}_2.fastp.fasta"
-    
-    """
-    sed -n '1~4s/^@/>/p;2~4p' $r1 > $r1_fasta;
-    sed -n '1~4s/^@/>/p;2~4p' $r2 > $r2_fasta;
-
-    """
-}
-
 //----------------------------------------
 
 //----------------------------------------
@@ -977,7 +946,8 @@ process MINIMAP2 {
         align = "${sample_id}_minimap2_align_pe.sam"
 
     """
-    minimap2 -a -t ${task.cpus} -ax sr $ref $r1 $r2 -o $align;
+    minimap2 -a -t ${task.cpus} \\
+        -ax sr $ref $r1 $r2 -o $align;
     """
 }
 
@@ -1286,8 +1256,7 @@ workflow {
 
     } else if (params.align == 'minimap2') {
         
-        FASTQTOFASTA(UNZIP.out.reads)
-        MINIMAP2(ch_ref, FASTQTOFASTA.out.reads)
+        MINIMAP2(ch_ref, UNZIP.out.reads)
         SAMTOBAM(MINIMAP2.out.align)
     } else {
         
