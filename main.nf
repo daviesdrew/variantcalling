@@ -866,26 +866,31 @@ process BWA {
     tag "$sample_id"
     publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.sam", mode: 'copy'
+    publishDir "${params.outdir}/align/${params.align}",
+                pattern: "*.bam", mode: 'copy'
 
     input:
         file ref            
         tuple val(sample_id), path(r1), path(r2), path(r1_sai), path(r2_sai)
     
     output:
-        file "${sample_id}_bwa_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'align'
+        tuple val(sample_id), path(bam), emit: 'align'
     
     echo true
     
     script:
-        align = "${sample_id}_bwa_align_pe.sam"
+        align = "${sample_id}_${params.align}_align_pe.sam"
+        bam = "${sample_id}_${params.align}_align_pe.bam"
         args = "${params.align_args}"
       
     """
     echo $ref
     echo $args
     bwa index -a bwtsw $ref;
-    bwa sampe -P $ref $r2_sai $r2_sai $r1 $r2 > $align;
+    bwa sampe -P $ref $r2_sai $r2_sai $r1 $r2 > $align \\
+    | samtools sort -@${task.cpus} \\
+    | samtools view -F4 -b -o $bam \\
+    
     """
 }
 
@@ -1256,19 +1261,19 @@ workflow {
     
     if (params.align == 'bowtie2') {
         
-        BOWTIE2(ch_ref, UNZIP.out.reads)
+        BOWTIE2(ch_ref, FASTP.out.reads)
         BAMINDEX(BOWTIE2.out.align)
     
     } else if (params.align == 'minimap2') {
         
-        MINIMAP2(ch_ref, UNZIP.out.reads)
+        MINIMAP2(ch_ref, FASTP.out.reads)
         BAMINDEX(MINIMAP2.out.align)
     
     } else {
         
-        BWAINDEX(ch_ref, UNZIP.out.reads)
+        BWAINDEX(ch_ref, FASTP.out.reads)
         BWA(ch_ref, BWAINDEX.out.reads)
-        BAMINDEX(BAMSORT.out.align)
+        BAMINDEX(BWA.out.align)
     }
     
     //----------------------------------------
