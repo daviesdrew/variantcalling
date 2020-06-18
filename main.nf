@@ -803,7 +803,7 @@ process BWA {
       
     """
     bwa index -a bwtsw $ref;
-    bwa mem $ref $r1 $r2 -o $align \\
+    bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align \\
     | samtools sort -@${task.cpus} \\
     | samtools view -F4 -b -o $bam \\
 
