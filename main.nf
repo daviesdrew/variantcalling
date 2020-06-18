@@ -203,6 +203,23 @@ def helpMessage() {
     
      --read_indel_limit []           Desc freebayes --read-indel-limit [int]
 
+   ${c_bul}Freebayes Variant Caller Options:${c_reset}
+     --soft_filter                   Desc bcftools filter --soft-filter [string]
+    
+    --set_GTs                        Desc bcftools filter --set-GTs [.|0]
+    
+    --snp_gap                        Desc bcftools filter --SnpGap [int]
+
+    --indel_gap                      Desc bcftools filter --IndelGap [int]
+
+    --mode                           Desc bcftools filter --mode [+x]
+
+   ${c_bul}SnpEff Gene Prediction Options:${c_reset}
+    
+    
+    
+    
+    
     """.stripIndent()
 }
 
@@ -317,7 +334,32 @@ params.freebayes_args = [
 //----------------------------------------
 
 params.bcftools_filter_args = [
-    'key': 'one'
+    'soft_filter': '-soft-filter', // bcftools filter --soft-filter [string]
+    
+    'set_GTs': '-set-GTs', //bcftools filter --set-GTs [.|0]
+    
+    'snp_gap': '-SnpGap', //bcftools filter --SnpGap [int]
+
+    'indel_gap': '-IndelGap', //bcftools filter --IndelGap [int]
+
+    'mode': '-mode' //bcftools filter --mode [+x]
+]
+//----------------------------------------
+
+//----------------------------------------
+// CONSTANT VALUES: PREDICTION
+//----------------------------------------
+
+params.snpeff_args = [
+    'soft_filter': '-soft-filter', // bcftools filter --soft-filter [string]
+    
+    'set_GTs': '-set-GTs', //bcftools filter --set-GTs [.|0]
+    
+    'snp_gap': '-SnpGap', //bcftools filter --SnpGap [int]
+
+    'indel_gap': '-IndelGap', //bcftools filter --IndelGap [int]
+
+    'mode': '-mode' //bcftools filter --mode [+x]
 ]
 //----------------------------------------
 
@@ -405,28 +447,35 @@ def input_validation(tool_type, tool_args) {
             case 'align':
                 check_aligner(tool)
                 println("Args for align process")
-                println("${params.align_args_str}")
+                println("${params.align_args_str}\n")
                 //check_sys_for_aligner(tool)
                 break;
 
             case 'variant': 
                 check_variant_caller(tool)
                 println("Args for variant calling process")
-                println("${params.variant_args_str}")
+                println("${params.variant_args_str}\n")
                 //check_sys_for_variant_caller(tool)
                 break;
 
             case 'filter':
                 check_filter(tool)
                 println("Args for filter process")
-                println("${params.filter_args_str}")
+                println("${params.filter_args_str}\n")
                 //check_sys_for_filter(tool)
                 break;
         
+            case 'prediction':
+                check_prediction(tool)
+                println("Args for prediction process")
+                println("${params.prediction_args_str}\n")
+                //check_sys_for_prediction(tool)
+                break;
+
             case 'consensus':
                 check_consensus(tool)
                 println("Args for consensus process")
-                println("${params.consensus_args_str}")
+                println("${params.consensus_args_str}\n")
                 //check_sys_for_consensus(tool)
                 break;
     }
@@ -499,6 +548,29 @@ def check_filter(filter) {
 //----------------------------------------
 
 //----------------------------------------
+// HELPER FUNCTIONS: CHECK PREDICTION ARGS 
+//----------------------------------------
+def check_prediction(prediction) {
+    println("Checking prediction tool arguments")
+    prediction_args = [:]
+    arg_str_to_dict(params.prediction_args, prediction_args)
+    
+    acceptable_args = [
+        'snpeff': params.snpeff_args
+    ]
+    println("before check_args") 
+    print_arg_comparison(prediction, 
+                          prediction_args, 
+                          acceptable_args[prediction])
+     
+    params.prediction_args_str = check_args(prediction,
+                                            prediction_args,
+                                            acceptable_args[prediction])
+}
+
+//----------------------------------------
+
+//----------------------------------------
 // HELPER FUNCTIONS: CHECK CONSENSUS ARGS
 //----------------------------------------
 def check_consensus(consensus) {
@@ -530,6 +602,7 @@ def check_consensus(consensus) {
 arguments = [ 'align': 'align_args', 
               'variant': 'variant_args',
               'filter': 'filter_args',
+              'prediction': 'prediction_args',
               'consensus': 'consensus_args' ] 
 
 arguments.each{ k, v -> check_arg_existence(k, v) }
@@ -1046,7 +1119,7 @@ process BCFTOOLS_STATS {
         stats = "${sample_id}_stats.txt"
 
     """
-    bcftools stats -F $ref $variant > $stats; 
+    bcftools stats -F $ref $variant -v > $stats; 
     
     """
 }
@@ -1067,15 +1140,16 @@ process BCFTOOLS_FILTER {
         tuple val(sample_id), path(variant), path(ref)
 
     output:
-        tuple val(sample_id), path(variant),
+        tuple val(sample_id), path(filtered),
                 emit: 'variant'
         file "${sample_id}_filtered.vcf"
             
     script: 
+        options = ""
         filtered = "${sample_id}_filtered.vcf"
 
     """
-    bcftools stats $variant > $filtered; 
+    bcftools filter $options $variant -o $filtered; 
     
     """
 }
@@ -1193,19 +1267,15 @@ workflow {
     
     
     //----------------------------------------
-    // Aligners Put each aligner in a different workflow
+    // Read Mapping
     //----------------------------------------
+    
     ch_ref = Channel.value(file("${baseDir}/data/ref.fa"))
 
     UNZIP(FASTP.out.reads)
     
-    if (params.align == 'bwa') {     
-        
-        BWAINDEX(ch_ref, UNZIP.out.reads)
-        BWA(ch_ref, BWAINDEX.out.reads)
-        SAMTOBAM(BWA.out.align) //ch_align, BWA.out.sample_id)
     
-    } else if (params.align == 'bowtie2') {
+    if (params.align == 'bowtie2') {
         
         BOWTIE2(ch_ref, UNZIP.out.reads)
         SAMTOBAM(BOWTIE2.out.align)
@@ -1215,30 +1285,71 @@ workflow {
         FASTQTOFASTA(UNZIP.out.reads)
         MINIMAP2(ch_ref, FASTQTOFASTA.out.reads)
         SAMTOBAM(MINIMAP2.out.align)
+    } else {
+        
+        BWAINDEX(ch_ref, UNZIP.out.reads)
+        BWA(ch_ref, BWAINDEX.out.reads)
+        SAMTOBAM(BWA.out.align) //ch_align, BWA.out.sample_id)
     }
     
     //----------------------------------------
-    // From samtools to SnpEff
+    // BAM SORTING AND INDEXING
     //----------------------------------------
+    
     BAMSORT(SAMTOBAM.out.align)
     BAMINDEX(BAMSORT.out.align)
 
-    //freebayes process
-    FREEBAYES(ch_ref, BAMINDEX.out.align)
-     
+    //----------------------------------------
+    // VARIANT CALLING 
+    //----------------------------------------
+    
+    if (params.variant == 'other_variant_calling _tool') {
+
+        FREEBAYES(ch_ref, BAMINDEX.out.align)
+    
+    else {
+    
+        FREEBAYES(ch_ref, BAMINDEX.out.align)
+    
+    }
+    
+    //----------------------------------------
+    // STATS
+    //----------------------------------------
+
     BCFTOOLS_STATS(FREEBAYES.out.variant)
-    BCFTOOLS_FILTER(FREEBAYES.out.variant)
-    SNPEFF(BCFTOOLS_FILTER.out.variant)
     
     //----------------------------------------
-    // Consensus building put in own workflows like aligners
+    // FILTERING 
+    //----------------------------------------
+
+    if (params.filter == 'other_filtering_tool') {
+
+        BCFTOOLS_FILTER(FREEBAYES.out.variant)
+    
+    } else {
+        
+        BCFTOOLS_FILTER(FREEBAYES.out.variant)
+    }
+     
+    //----------------------------------------
+    // Annotate Genomic Variants    
+    //----------------------------------------
+
+    if (params.prediction == 'other_annotation_tool') {
+        
+        SNPEFF(BCFTOOLS_FILTER.out.variant)
+    
+    } else {
+
+        SNPEFF(BCFTOOLS_FILTER.out.variant)
+
+    }
+    //----------------------------------------
+    // Consensus building 
     //----------------------------------------
     
-    if (params.consensus == 'bcftools') {
-
-        BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
-
-    } else if (params.consensus == 'vcf_consensus') {
+    if (params.consensus == 'vcf_consensus') {
 
         VCF_CONSENSUS(ch_ref, SNPEFF.out.annotation)
     
