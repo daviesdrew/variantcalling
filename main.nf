@@ -1267,19 +1267,15 @@ workflow {
     
     
     //----------------------------------------
-    // Aligners Put each aligner in a different workflow
+    // Read Mapping
     //----------------------------------------
+    
     ch_ref = Channel.value(file("${baseDir}/data/ref.fa"))
 
     UNZIP(FASTP.out.reads)
     
-    if (params.align == 'bwa') {     
-        
-        BWAINDEX(ch_ref, UNZIP.out.reads)
-        BWA(ch_ref, BWAINDEX.out.reads)
-        SAMTOBAM(BWA.out.align) //ch_align, BWA.out.sample_id)
     
-    } else if (params.align == 'bowtie2') {
+    if (params.align == 'bowtie2') {
         
         BOWTIE2(ch_ref, UNZIP.out.reads)
         SAMTOBAM(BOWTIE2.out.align)
@@ -1289,30 +1285,71 @@ workflow {
         FASTQTOFASTA(UNZIP.out.reads)
         MINIMAP2(ch_ref, FASTQTOFASTA.out.reads)
         SAMTOBAM(MINIMAP2.out.align)
+    } else {
+        
+        BWAINDEX(ch_ref, UNZIP.out.reads)
+        BWA(ch_ref, BWAINDEX.out.reads)
+        SAMTOBAM(BWA.out.align) //ch_align, BWA.out.sample_id)
     }
     
     //----------------------------------------
-    // From samtools to SnpEff
+    // BAM SORTING AND INDEXING
     //----------------------------------------
+    
     BAMSORT(SAMTOBAM.out.align)
     BAMINDEX(BAMSORT.out.align)
 
-    //freebayes process
-    FREEBAYES(ch_ref, BAMINDEX.out.align)
-     
+    //----------------------------------------
+    // VARIANT CALLING 
+    //----------------------------------------
+    
+    if (params.variant == 'other_variant_calling _tool') {
+
+        FREEBAYES(ch_ref, BAMINDEX.out.align)
+    
+    else {
+    
+        FREEBAYES(ch_ref, BAMINDEX.out.align)
+    
+    }
+    
+    //----------------------------------------
+    // STATS
+    //----------------------------------------
+
     BCFTOOLS_STATS(FREEBAYES.out.variant)
-    BCFTOOLS_FILTER(FREEBAYES.out.variant)
-    SNPEFF(BCFTOOLS_FILTER.out.variant)
     
     //----------------------------------------
-    // Consensus building put in own workflows like aligners
+    // FILTERING 
+    //----------------------------------------
+
+    if (params.filter == 'other_filtering_tool') {
+
+        BCFTOOLS_FILTER(FREEBAYES.out.variant)
+    
+    } else {
+        
+        BCFTOOLS_FILTER(FREEBAYES.out.variant)
+    }
+     
+    //----------------------------------------
+    // Annotate Genomic Variants    
+    //----------------------------------------
+
+    if (params.prediction == 'other_annotation_tool') {
+        
+        SNPEFF(BCFTOOLS_FILTER.out.variant)
+    
+    } else {
+
+        SNPEFF(BCFTOOLS_FILTER.out.variant)
+
+    }
+    //----------------------------------------
+    // Consensus building 
     //----------------------------------------
     
-    if (params.consensus == 'bcftools') {
-
-        BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
-
-    } else if (params.consensus == 'vcf_consensus') {
+    if (params.consensus == 'vcf_consensus') {
 
         VCF_CONSENSUS(ch_ref, SNPEFF.out.annotation)
     
