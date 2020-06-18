@@ -900,25 +900,29 @@ process BOWTIE2 {
     tag "$sample_id"
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
     publishDir "${params.outdir}/align/${params.align}",
-                pattern: "*.sam", mode: 'copy'
+                pattern: "*.bam", mode: 'copy'
+
     input:
         file ref
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        file "${sample_id}_bowtie2_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'align'
+        file "${sample_id}_${params.align}_align_pe.bam"
+        tuple val(sample_id), path(bam), emit: 'align'
 
     script:
         index_dir = "./index"
         indexes = "./index/index"
-        align = "${sample_id}_bowtie2_align_pe.sam"
+        bam = "${sample_id}_bowtie2_align_pe.bam"
     
     """
     sudo mkdir $index_dir;
     sudo chmod 777 $index_dir;
     bowtie2-build $ref $indexes;
-    bowtie2 --threads ${task.cpus} -x $indexes -1 $r1 -2 $r2 -S $align;
+    bowtie2 --threads ${task.cpus} \\
+            -x $indexes -1 $r1 -2 $r2 \\
+    | samtools sort -@${task.cpus} \\
+    | samtools view -F4 -b -o $bam 
     """
 }
 //----------------------------------------
@@ -1253,7 +1257,7 @@ workflow {
     if (params.align == 'bowtie2') {
         
         BOWTIE2(ch_ref, UNZIP.out.reads)
-        BAMINDEX(BAMSORT.out.align)
+        BAMINDEX(BOWTIE2.out.align)
     
     } else if (params.align == 'minimap2') {
         
@@ -1267,11 +1271,6 @@ workflow {
         BAMINDEX(BAMSORT.out.align)
     }
     
-    //----------------------------------------
-    // INDEXING
-    //----------------------------------------
-    
-
     //----------------------------------------
     // VARIANT CALLING 
     //----------------------------------------
