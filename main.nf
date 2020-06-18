@@ -800,7 +800,7 @@ process FASTQC {
 
 process UNZIP {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/bwa",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.fastp.fastq", mode: 'copy'
     
     input:
@@ -829,7 +829,7 @@ process UNZIP {
 
 process BWAINDEX {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/bwa", 
+    publishDir "${params.outdir}/align/${params.align}", 
                 pattern: "*.sai", mode: 'copy'
     publishDir "${params.outdir}/align/bwa/index",
                 pattern: "ref.fa.*", mode: 'copy'
@@ -864,7 +864,7 @@ process BWAINDEX {
 
 process BWA {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/alignment",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.sam", mode: 'copy'
 
     input:
@@ -899,7 +899,7 @@ process BWA {
 process BOWTIE2 {
     tag "$sample_id"
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
-    publishDir "${params.outdir}/align/alignment",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.sam", mode: 'copy'
     input:
         file ref
@@ -931,23 +931,25 @@ process BOWTIE2 {
 
 process MINIMAP2 {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/alignment",
-                pattern: "*.sam", mode: 'copy'
-
+    publishDir "${params.outdir}/align/${params.align}",
+                pattern: "*.bam", mode: "copy"
+    
     input:
         file ref            
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        file "${sample_id}_minimap2_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'align'
+        file "${sample_id}_${params.align}_align_pe.bam"
+        tuple val(sample_id), path(bam), emit: 'align'
     
     script:
-        align = "${sample_id}_minimap2_align_pe.sam"
+        bam = "${sample_id}_${params.align}_align_pe.bam"
 
     """
     minimap2 -a -t ${task.cpus} \\
-        -ax sr $ref $r1 $r2 -o $align;
+        -ax sr $ref $r1 $r2 \\
+        | samtools sort -@${task.cpus} \\
+        | samtools view -F4 -b -o $bam 
     """
 }
 
@@ -961,7 +963,7 @@ process MINIMAP2 {
 
 process SAMTOBAM {
     tag "$sample_id"
-    publishDir "${params.outdir}/samconvert/${method}",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: "copy"
 
     input: 
@@ -1016,19 +1018,18 @@ process BAMSORT {
 
 process BAMINDEX {
     tag "$sample_id"
-    publishDir "${params.outdir}/samconvert/${method}",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bai", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align), val(method)
+        tuple val(sample_id), path(align)
 
     output:
-        file "${sample_id}_${method}_align_pe.bai"
-        tuple val(sample_id),  path(align), 
-              val(method), emit: 'align'
+        file "${sample_id}_${params.align}_align_pe.bai"
+        tuple val(sample_id),  path(align), emit: 'align'
     
     script: 
-        indexed_bam = "${sample_id}_${method}_align_pe.bai"
+        indexed_bam = "${sample_id}_${params.align}_align_pe.bai"
 
     """
     samtools index $align $indexed_bam
@@ -1052,7 +1053,7 @@ process FREEBAYES {
     echo true 
     input: 
         file ref
-        tuple val(sample_id), path(bam), val(method)
+        tuple val(sample_id), path(bam)
 
     output:
         tuple val(sample_id), path(variant), path(ref), 
@@ -1252,25 +1253,24 @@ workflow {
     if (params.align == 'bowtie2') {
         
         BOWTIE2(ch_ref, UNZIP.out.reads)
-        SAMTOBAM(BOWTIE2.out.align)
-
+        BAMINDEX(BAMSORT.out.align)
+    
     } else if (params.align == 'minimap2') {
         
         MINIMAP2(ch_ref, UNZIP.out.reads)
-        SAMTOBAM(MINIMAP2.out.align)
+        BAMINDEX(MINIMAP2.out.align)
+    
     } else {
         
         BWAINDEX(ch_ref, UNZIP.out.reads)
         BWA(ch_ref, BWAINDEX.out.reads)
-        SAMTOBAM(BWA.out.align) //ch_align, BWA.out.sample_id)
+        BAMINDEX(BAMSORT.out.align)
     }
     
     //----------------------------------------
-    // BAM SORTING AND INDEXING
+    // INDEXING
     //----------------------------------------
     
-    BAMSORT(SAMTOBAM.out.align)
-    BAMINDEX(BAMSORT.out.align)
 
     //----------------------------------------
     // VARIANT CALLING 
