@@ -633,9 +633,7 @@ summary['Variant Caller']       = params.variant
 summary['Variant Caller Args']  = params.variant_args
 summary['Filter']               = params.filter
 summary['Filter Args']          = params.filter_args
-summary['Consensus']            = (params.containsKey('consensus'))
-                                    ? params.consensus
-                                    : null
+summary['Consensus']            = params.consensus
 summary['Consensus Args']       = params.consensus_args
 
 summary['Max Memory']           = params.max_memory
@@ -794,35 +792,6 @@ process FASTQC {
 //----------------------------------------
 
 //----------------------------------------
-// PROCESSES: UNZIP 
-// Unzip file pair 
-//----------------------------------------
-
-process UNZIP {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
-                pattern: "*.fastp.fastq", mode: 'copy'
-    
-    input:
-        tuple val(sample_id), path(r1), path(r2)
-
-    output:
-        tuple val(sample_id), path(r1_out), path(r2_out),
-                emit: 'reads'
-
-    script:
-        r1_out = "${sample_id}_1.fastp.fastq"
-        r2_out = "${sample_id}_2.fastp.fastq"
-
-    """
-    gzip -d --force $r1 > $r1_out;
-    gzip -d --force $r2 > $r2_out;
-    """
-}
-
-//----------------------------------------
-
-//----------------------------------------
 // PROCESSES: BWAINDEX 
 // Build the reference genome index
 //----------------------------------------
@@ -959,62 +928,6 @@ process MINIMAP2 {
         -ax sr $ref $r1 $r2 \\
         | samtools sort -@${task.cpus} \\
         | samtools view -F4 -b -o $bam 
-    """
-}
-
-//----------------------------------------
-
-//----------------------------------------
-// PROCESSES: SAMTOBAM
-// Convert files from SAM to BAM format  
-// Prepares output from BWA to become input for Freebayes
-//----------------------------------------
-
-process SAMTOBAM {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
-                pattern: "*.bam", mode: "copy"
-
-    input: 
-        tuple val(sample_id), path(align)
-
-    output:
-        tuple val(sample_id), path(align_bam), 
-              val(method), emit: 'align'
-        
-    script: 
-        method = "${align}".split('_')[1]
-        align_bam = "${sample_id}_${method}_align_pe.bam"
-
-    """
-    samtools view -S -b $align > $align_bam;
-    """
-}
-
-//----------------------------------------
-
-//----------------------------------------
-// PROCESSES: BAMSORT
-// Sort Bam file  
-//----------------------------------------
-
-process BAMSORT {
-    tag "$sample_id"
-    publishDir "${params.outdir}/samconvert/${method}",
-                pattern: "*.sorted.bam", mode: "copy"
-
-    input: 
-        tuple val(sample_id), path(align), val(method)
-
-    output:
-        tuple val(sample_id), path(sorted_bam), 
-              val(method), emit: 'align'
-    
-    script: 
-        sorted_bam = "${sample_id}_${method}_align_pe.sorted.bam"
-
-    """
-    samtools sort $align -o $sorted_bam -O bam
     """
 }
 
@@ -1256,9 +1169,6 @@ workflow {
     
     ch_ref = Channel.value(file("${baseDir}/data/ref.fa"))
 
-    UNZIP(FASTP.out.reads)
-    
-    
     if (params.align == 'bowtie2') {
         
         BOWTIE2(ch_ref, FASTP.out.reads)
