@@ -334,7 +334,11 @@ params.freebayes_args = [
 //----------------------------------------
 
 params.bcftools_filter_args = [
-    'soft_filter': '-soft-filter', // bcftools filter --soft-filter [string]
+    'include': '-include', //bcftools filter --include [expr]
+
+    'exclude': '-exclude', //bcftools filter --exclude [expr]
+
+    'soft_filter': '-soft-filter', //bcftools filter --soft-filter [string]
     
     'set_GTs': '-set-GTs', //bcftools filter --set-GTs [.|0]
     
@@ -796,7 +800,7 @@ process FASTQC {
 
 process UNZIP {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/bwa",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.fastp.fastq", mode: 'copy'
     
     input:
@@ -825,7 +829,7 @@ process UNZIP {
 
 process BWAINDEX {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/bwa", 
+    publishDir "${params.outdir}/align/${params.align}", 
                 pattern: "*.sai", mode: 'copy'
     publishDir "${params.outdir}/align/bwa/index",
                 pattern: "ref.fa.*", mode: 'copy'
@@ -860,7 +864,7 @@ process BWAINDEX {
 
 process BWA {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/alignment",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.sam", mode: 'copy'
 
     input:
@@ -895,59 +899,32 @@ process BWA {
 process BOWTIE2 {
     tag "$sample_id"
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
-    publishDir "${params.outdir}/align/alignment",
-                pattern: "*.sam", mode: 'copy'
+    publishDir "${params.outdir}/align/${params.align}",
+                pattern: "*.bam", mode: 'copy'
+
     input:
         file ref
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        file "${sample_id}_bowtie2_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'align'
+        file "${sample_id}_${params.align}_align_pe.bam"
+        tuple val(sample_id), path(bam), emit: 'align'
 
     script:
         index_dir = "./index"
         indexes = "./index/index"
-        align = "${sample_id}_bowtie2_align_pe.sam"
+        bam = "${sample_id}_bowtie2_align_pe.bam"
     
     """
     sudo mkdir $index_dir;
     sudo chmod 777 $index_dir;
     bowtie2-build $ref $indexes;
-    bowtie2 --threads ${task.cpus} -x $indexes -1 $r1 -2 $r2 -S $align;
+    bowtie2 --threads ${task.cpus} \\
+            -x $indexes -1 $r1 -2 $r2 \\
+    | samtools sort -@${task.cpus} \\
+    | samtools view -F4 -b -o $bam 
     """
 }
-
-//----------------------------------------
-
-//----------------------------------------
-// PROCESSES: FASTQTOFASTA
-// Convert fastq files to fasta files 
-//----------------------------------------
-
-process FASTQTOFASTA {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/minimap2",
-                pattern: "*.fasta", mode: 'copy'
-
-    input:
-        tuple val(sample_id), path(r1), path(r2)
-    
-    output:
-        tuple val(sample_id), path(r1_fasta), path(r2_fasta),
-                emit: 'reads'
-    
-    script:
-        r1_fasta = "${sample_id}_1.fastp.fasta"
-        r2_fasta = "${sample_id}_2.fastp.fasta"
-    
-    """
-    sed -n '1~4s/^@/>/p;2~4p' $r1 > $r1_fasta;
-    sed -n '1~4s/^@/>/p;2~4p' $r2 > $r2_fasta;
-
-    """
-}
-
 //----------------------------------------
 
 //----------------------------------------
@@ -958,22 +935,25 @@ process FASTQTOFASTA {
 
 process MINIMAP2 {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/alignment",
-                pattern: "*.sam", mode: 'copy'
-
+    publishDir "${params.outdir}/align/${params.align}",
+                pattern: "*.bam", mode: "copy"
+    
     input:
         file ref            
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        file "${sample_id}_minimap2_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'align'
+        file "${sample_id}_${params.align}_align_pe.bam"
+        tuple val(sample_id), path(bam), emit: 'align'
     
     script:
-        align = "${sample_id}_minimap2_align_pe.sam"
+        bam = "${sample_id}_${params.align}_align_pe.bam"
 
     """
-    minimap2 -a -t ${task.cpus} -ax sr $ref $r1 $r2 -o $align;
+    minimap2 -a -t ${task.cpus} \\
+        -ax sr $ref $r1 $r2 \\
+        | samtools sort -@${task.cpus} \\
+        | samtools view -F4 -b -o $bam 
     """
 }
 
@@ -987,7 +967,7 @@ process MINIMAP2 {
 
 process SAMTOBAM {
     tag "$sample_id"
-    publishDir "${params.outdir}/samconvert/${method}",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: "copy"
 
     input: 
@@ -1042,19 +1022,18 @@ process BAMSORT {
 
 process BAMINDEX {
     tag "$sample_id"
-    publishDir "${params.outdir}/samconvert/${method}",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bai", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align), val(method)
+        tuple val(sample_id), path(align)
 
     output:
-        file "${sample_id}_${method}_align_pe.bai"
-        tuple val(sample_id),  path(align), 
-              val(method), emit: 'align'
+        file "${sample_id}_${params.align}_align_pe.bai"
+        tuple val(sample_id),  path(align), emit: 'align'
     
     script: 
-        indexed_bam = "${sample_id}_${method}_align_pe.bai"
+        indexed_bam = "${sample_id}_${params.align}_align_pe.bai"
 
     """
     samtools index $align $indexed_bam
@@ -1078,7 +1057,7 @@ process FREEBAYES {
     echo true 
     input: 
         file ref
-        tuple val(sample_id), path(bam), val(method)
+        tuple val(sample_id), path(bam)
 
     output:
         tuple val(sample_id), path(variant), path(ref), 
@@ -1145,7 +1124,7 @@ process BCFTOOLS_FILTER {
         file "${sample_id}_filtered.vcf"
             
     script: 
-        options = ""
+        options = "${params.filter_args_str}"
         filtered = "${sample_id}_filtered.vcf"
 
     """
@@ -1278,27 +1257,20 @@ workflow {
     if (params.align == 'bowtie2') {
         
         BOWTIE2(ch_ref, UNZIP.out.reads)
-        SAMTOBAM(BOWTIE2.out.align)
-
+        BAMINDEX(BOWTIE2.out.align)
+    
     } else if (params.align == 'minimap2') {
         
-        FASTQTOFASTA(UNZIP.out.reads)
-        MINIMAP2(ch_ref, FASTQTOFASTA.out.reads)
-        SAMTOBAM(MINIMAP2.out.align)
+        MINIMAP2(ch_ref, UNZIP.out.reads)
+        BAMINDEX(MINIMAP2.out.align)
+    
     } else {
         
         BWAINDEX(ch_ref, UNZIP.out.reads)
         BWA(ch_ref, BWAINDEX.out.reads)
-        SAMTOBAM(BWA.out.align) //ch_align, BWA.out.sample_id)
+        BAMINDEX(BAMSORT.out.align)
     }
     
-    //----------------------------------------
-    // BAM SORTING AND INDEXING
-    //----------------------------------------
-    
-    BAMSORT(SAMTOBAM.out.align)
-    BAMINDEX(BAMSORT.out.align)
-
     //----------------------------------------
     // VARIANT CALLING 
     //----------------------------------------
@@ -1307,7 +1279,7 @@ workflow {
 
         FREEBAYES(ch_ref, BAMINDEX.out.align)
     
-    else {
+    } else {
     
         FREEBAYES(ch_ref, BAMINDEX.out.align)
     
