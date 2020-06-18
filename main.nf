@@ -236,7 +236,6 @@ if (params.help) {
 //----------------------------------------
 // CONSTANT VALUES: ALIGNERS
 //----------------------------------------
-
 params.bwa_args = [ 
     'max_edit_dist': 'n', //bwa aln -n
     'max_gap_opens': 'o', //bwa aln -o
@@ -300,13 +299,11 @@ params.minimap2_args = [
     'end_bonus': '-end-bonus', //minimap2 --end-bonus [int]
     'ambig_mismatch': '-score-N' //minimap2 --score-N [int]
 ]
-
 //----------------------------------------
 
 //----------------------------------------
 // CONSTANT VALUES: VARIANT CALLERS
 //----------------------------------------
-
 params.freebayes_args = [ 
     'use_ref_allele': '-use-reference-allele', //freebayes --use-reference-allele
     'theta': '-theta', //freebayes --theta [num]
@@ -326,13 +323,11 @@ params.freebayes_args = [
     'read_snp_limit': '-read-snp-limit', //freebayes --read-snp-limit [int]
     'read_indel_limit': '-read-indel-limit' //freebayes --read-indel-limit [int]
 ]
-
 //----------------------------------------
 
 //----------------------------------------
 // CONSTANT VALUES: FILTERS
 //----------------------------------------
-
 params.bcftools_filter_args = [
     'include': '-include', //bcftools filter --include [expr]
 
@@ -353,7 +348,6 @@ params.bcftools_filter_args = [
 //----------------------------------------
 // CONSTANT VALUES: PREDICTION
 //----------------------------------------
-
 params.snpeff_args = [
     'soft_filter': '-soft-filter', // bcftools filter --soft-filter [string]
     
@@ -370,7 +364,6 @@ params.snpeff_args = [
 //----------------------------------------
 // CONSTANT VALUES: CONSENSUSES 
 //----------------------------------------
-
 params.bcftools_consensus_args = [
     'key': 'one'
 ]
@@ -378,7 +371,6 @@ params.bcftools_consensus_args = [
 params.vcf_consensus_args = [
     'key': 'one'
 ]
-
 //----------------------------------------
 
 //=============================================================================
@@ -438,12 +430,11 @@ def check_args(tool, tool_args, tool_accept_args) {
     new_dict = swap_arg_keys(tool_args, tool_accept_args, new_dict)
     return arg_dict_to_str(new_dict)
 }
-
+//----------------------------------------
 
 //----------------------------------------
 // HELPER FUNCTIONS: INPUT VALIDATION
 //----------------------------------------
-
 def input_validation(tool_type, tool_args) {
     tool = params[tool_type]
     args = null
@@ -548,7 +539,6 @@ def check_filter(filter) {
                                         filter_args,
                                         acceptable_args[filter])
 }
-
 //----------------------------------------
 
 //----------------------------------------
@@ -571,7 +561,6 @@ def check_prediction(prediction) {
                                             prediction_args,
                                             acceptable_args[prediction])
 }
-
 //----------------------------------------
 
 //----------------------------------------
@@ -633,9 +622,7 @@ summary['Variant Caller']       = params.variant
 summary['Variant Caller Args']  = params.variant_args
 summary['Filter']               = params.filter
 summary['Filter Args']          = params.filter_args
-summary['Consensus']            = (params.containsKey('consensus'))
-                                    ? params.consensus
-                                    : null
+summary['Consensus']            = params.consensus
 summary['Consensus Args']       = params.consensus_args
 
 summary['Max Memory']           = params.max_memory
@@ -794,108 +781,40 @@ process FASTQC {
 //----------------------------------------
 
 //----------------------------------------
-// PROCESSES: UNZIP 
-// Unzip file pair 
-//----------------------------------------
-
-process UNZIP {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
-                pattern: "*.fastp.fastq", mode: 'copy'
-    
-    input:
-        tuple val(sample_id), path(r1), path(r2)
-
-    output:
-        tuple val(sample_id), path(r1_out), path(r2_out),
-                emit: 'reads'
-
-    script:
-        r1_out = "${sample_id}_1.fastp.fastq"
-        r2_out = "${sample_id}_2.fastp.fastq"
-
-    """
-    gzip -d --force $r1 > $r1_out;
-    gzip -d --force $r2 > $r2_out;
-    """
-}
-
-//----------------------------------------
-
-//----------------------------------------
-// PROCESSES: BWAINDEX 
-// Build the reference genome index
-//----------------------------------------
-
-process BWAINDEX {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}", 
-                pattern: "*.sai", mode: 'copy'
-    publishDir "${params.outdir}/align/bwa/index",
-                pattern: "ref.fa.*", mode: 'copy'
-    input:
-        file ref            
-        tuple val(sample_id), path(r1), path(r2)
-    
-    output:
-        file "${sample_id}_1.sai"
-        file "${sample_id}_2.sai"
-        tuple val(sample_id), path(r1), path(r2), path(r1_sai), path(r2_sai),
-                emit: 'reads'
-    
-    script:
-        r1_sai = "${sample_id}_1.sai"
-        r2_sai = "${sample_id}_2.sai"
-
-    """
-    bwa index -a bwtsw $ref;
-    bwa aln -t ${task.cpus} -I $ref $r1 > $r1_sai;
-    bwa aln -t ${task.cpus} -I $ref $r2 > $r2_sai;
-    """
-}
-
-//----------------------------------------
-
-//----------------------------------------
 // PROCESSES: BWA 
 // Paired End read alignment 
 // Utilizes reference genome
 //----------------------------------------
-
 process BWA {
     tag "$sample_id"
     publishDir "${params.outdir}/align/${params.align}",
-                pattern: "*.sam", mode: 'copy'
+                pattern: "*.bam", mode: 'copy'
 
     input:
         file ref            
-        tuple val(sample_id), path(r1), path(r2), path(r1_sai), path(r2_sai)
+        tuple val(sample_id), path(r1), path(r2)
     
     output:
-        file "${sample_id}_bwa_align_pe.sam"
-        tuple val(sample_id), path(align), emit: 'align'
-    
-    echo true
+        tuple val(sample_id), path(bam), emit: 'align'
     
     script:
-        align = "${sample_id}_bwa_align_pe.sam"
-        args = "${params.align_args}"
+        align = "${sample_id}_${params.align}_align_pe.sam"
+        bam = "${sample_id}_${params.align}_align_pe.bam"
       
     """
-    echo $ref
-    echo $args
     bwa index -a bwtsw $ref;
-    bwa sampe -P $ref $r2_sai $r2_sai $r1 $r2 > $align;
+    bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align \\
+    | samtools sort -@${task.cpus} \\
+    | samtools view -F4 -b -o $bam \\
+
     """
 }
-
 //----------------------------------------
 
 //----------------------------------------
 // PROCESSES: BOWTIE2 
 // Build the reference genome index
 //----------------------------------------
-
 process BOWTIE2 {
     tag "$sample_id"
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
@@ -932,7 +851,6 @@ process BOWTIE2 {
 // Paired End read alignment 
 // Utilizes reference genome
 //----------------------------------------
-
 process MINIMAP2 {
     tag "$sample_id"
     publishDir "${params.outdir}/align/${params.align}",
@@ -956,70 +874,12 @@ process MINIMAP2 {
         | samtools view -F4 -b -o $bam 
     """
 }
-
-//----------------------------------------
-
-//----------------------------------------
-// PROCESSES: SAMTOBAM
-// Convert files from SAM to BAM format  
-// Prepares output from BWA to become input for Freebayes
-//----------------------------------------
-
-process SAMTOBAM {
-    tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
-                pattern: "*.bam", mode: "copy"
-
-    input: 
-        tuple val(sample_id), path(align)
-
-    output:
-        tuple val(sample_id), path(align_bam), 
-              val(method), emit: 'align'
-        
-    script: 
-        method = "${align}".split('_')[1]
-        align_bam = "${sample_id}_${method}_align_pe.bam"
-
-    """
-    samtools view -S -b $align > $align_bam;
-    """
-}
-
-//----------------------------------------
-
-//----------------------------------------
-// PROCESSES: BAMSORT
-// Sort Bam file  
-//----------------------------------------
-
-process BAMSORT {
-    tag "$sample_id"
-    publishDir "${params.outdir}/samconvert/${method}",
-                pattern: "*.sorted.bam", mode: "copy"
-
-    input: 
-        tuple val(sample_id), path(align), val(method)
-
-    output:
-        tuple val(sample_id), path(sorted_bam), 
-              val(method), emit: 'align'
-    
-    script: 
-        sorted_bam = "${sample_id}_${method}_align_pe.sorted.bam"
-
-    """
-    samtools sort $align -o $sorted_bam -O bam
-    """
-}
-
 //----------------------------------------
 
 //----------------------------------------
 // PROCESSES: BAMINDEX
 // Index sorted Bam file  
 //----------------------------------------
-
 process BAMINDEX {
     tag "$sample_id"
     publishDir "${params.outdir}/align/${params.align}",
@@ -1039,7 +899,6 @@ process BAMINDEX {
     samtools index $align $indexed_bam
     """
 }
-
 //----------------------------------------
 
 //----------------------------------------
@@ -1047,7 +906,6 @@ process BAMINDEX {
 // Variant Calling 
 // Freebayes is the default variant caller  
 //----------------------------------------
-
 process FREEBAYES {
     tag "$sample_id"
     publishDir "${params.outdir}/variant/freebayes",
@@ -1075,14 +933,12 @@ process FREEBAYES {
     """
     //--contamination-estimates $contamination \\ 
 }
-
 //----------------------------------------
 
 //----------------------------------------
 // PROCESSES: BCFTOOLS_STATS
 // Collect stats from variant calls 
 //----------------------------------------
-
 process BCFTOOLS_STATS {
     tag "$sample_id"
     publishDir "${params.outdir}/variant",
@@ -1102,14 +958,12 @@ process BCFTOOLS_STATS {
     
     """
 }
-
 //----------------------------------------
 
 //----------------------------------------
 // PROCESSES: BCFTOOLS_FILTER
 // Filtering variant calls 
 //----------------------------------------
-
 process BCFTOOLS_FILTER {
     tag "$sample_id"
     publishDir "${params.outdir}/variant",
@@ -1132,14 +986,12 @@ process BCFTOOLS_FILTER {
     
     """
 }
-
 //----------------------------------------
 
 //----------------------------------------
 // PROCESSES: SNPEFF
 // Annotates variants 
 //----------------------------------------
-
 process SNPEFF {
     tag "$sample_id"
     publishDir "${params.outdir}/variant/prediction",
@@ -1161,14 +1013,12 @@ process SNPEFF {
     > $annotated
     """
 }
-
 //----------------------------------------
 
 //----------------------------------------
 // PROCESSES: BCFTOOLS_CONSENSUS
 // Build consensus sequence from variants
 //----------------------------------------
-
 process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
     publishDir "${params.outdir}/consensus/bcftools",
@@ -1191,14 +1041,12 @@ process BCFTOOLS_CONSENSUS {
     bcftools consensus -f $ref $zipped > $consensus
     """
 }
-
 //----------------------------------------
 
 //----------------------------------------
 // PROCESSES: VCF_CONSENSUS
 // Build consensus sequence from variants
 //----------------------------------------
-
 process VCF_CONSENSUS {
     tag "$sample_id"
     publishDir "${params.outdir}/consensus/vcf",
@@ -1215,7 +1063,6 @@ process VCF_CONSENSUS {
     bcftools consensus
     """
 }
-
 //----------------------------------------
 
 //=============================================================================
@@ -1251,24 +1098,20 @@ workflow {
     
     ch_ref = Channel.value(file("${baseDir}/data/ref.fa"))
 
-    UNZIP(FASTP.out.reads)
-    
-    
     if (params.align == 'bowtie2') {
         
-        BOWTIE2(ch_ref, UNZIP.out.reads)
+        BOWTIE2(ch_ref, FASTP.out.reads)
         BAMINDEX(BOWTIE2.out.align)
     
     } else if (params.align == 'minimap2') {
         
-        MINIMAP2(ch_ref, UNZIP.out.reads)
+        MINIMAP2(ch_ref, FASTP.out.reads)
         BAMINDEX(MINIMAP2.out.align)
     
     } else {
         
-        BWAINDEX(ch_ref, UNZIP.out.reads)
-        BWA(ch_ref, BWAINDEX.out.reads)
-        BAMINDEX(BAMSORT.out.align)
+        BWA(ch_ref, FASTP.out.reads)
+        BAMINDEX(BWA.out.align)
     }
     
     //----------------------------------------
