@@ -10,7 +10,6 @@ nextflow run main.nf \
 \
 --prediction snpeff --prediction_args "-soft_filter snpeff" \
 \
---consensus \
 \
 --reads "./data/CIN*R{1,2}*" \
 --ref "./data/ref.fa" \

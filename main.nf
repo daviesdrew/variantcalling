@@ -590,8 +590,8 @@ process BCFTOOLS_CONSENSUS {
 //----------------------------------------
 process VCF_CONSENSUS {
     tag "$sample_id"
-    publishDir "${params.outdir}/consensus/${params.consensus}",
-                pattern: "*.txt", mode: 'copy'
+    publishDir "${params.outdir}/consensus/vcf",
+                pattern: "*.fa", mode: 'copy'
     echo true 
     
     input:
@@ -599,9 +599,10 @@ process VCF_CONSENSUS {
         tuple val(sample_id), path(variant), path(depths)
 
     output:
+        file "${sample_id}_vcf_consensus.fa"
 
     script:
-        consensus = "${sample_id}_${params.consensus}_consensus.fa"
+        consensus = "${sample_id}_vcf_consensus.fa"
         
 
     """
@@ -610,7 +611,7 @@ process VCF_CONSENSUS {
         -d $depths \\
         -r $ref \\
         -o $consensus \\
-        --sample-name $sample_id \\ 
+        --sample-name $sample_id
     """
 }
 //----------------------------------------
