@@ -13,6 +13,7 @@ nextflow run main.nf \
 --consensus bcftools --consensus_args "-key bcftools" \
 \
 --reads "./data/CIN*R{1,2}*" \
+--ref "./data/ref.fa" \
 \
 --fastp_min_base_quality 15 \
 --fastp_max_percent_low_qual_base 40 \
