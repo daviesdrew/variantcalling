@@ -891,13 +891,17 @@ process BAMINDEX {
 
     output:
         file "${sample_id}_${params.align}_align_pe.bai"
-        tuple val(sample_id),  path(align), emit: 'align'
+        tuple val(sample_id),  path(align), path(depths), 
+              emit: 'align'
     
     script: 
         indexed_bam = "${sample_id}_${params.align}_align_pe.bai"
+        depths = "${sample_id}_depths.tsv"
 
     """
-    samtools index $align $indexed_bam
+    samtools index $align $indexed_bam;
+    samtools depth -a -d 0 $align \\
+    | perl -ne 'chomp \$_; print "${sample_id}\t\$_\n"' > $depths;
     """
 }
 //----------------------------------------
@@ -916,11 +920,11 @@ process FREEBAYES {
     echo true 
     input: 
         file ref
-        tuple val(sample_id), path(bam)
+        tuple val(sample_id), path(bam), path(depths)
 
     output:
         tuple val(sample_id), path(variant), path(ref), 
-                emit: 'variant'
+              path(depths), emit: 'variant'
     
     script: 
         variant = "${sample_id}.vcf"
@@ -946,7 +950,8 @@ process BCFTOOLS_STATS {
                 pattern: "*_stats.txt", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant), path(ref)
+        tuple val(sample_id), path(variant), 
+              path(ref), path(depths)
 
     output:
         file "${sample_id}_stats.txt"
@@ -971,20 +976,20 @@ process BCFTOOLS_FILTER {
                 pattern: "*_filtered.vcf", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant), path(ref)
+        tuple val(sample_id), path(variant), 
+              path(ref), path(depths)
 
     output:
-        tuple val(sample_id), path(filtered),
+        tuple val(sample_id), path(filtered), path(depths),
                 emit: 'variant'
         file "${sample_id}_filtered.vcf"
             
     script: 
         options = "${params.filter_args_str}"
         filtered = "${sample_id}_filtered.vcf"
-
+    
     """
     bcftools filter $options $variant -o $filtered; 
-    
     """
 }
 //----------------------------------------
@@ -999,11 +1004,11 @@ process SNPEFF {
                 pattern: "*_annotation.vcf", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant)
+        tuple val(sample_id), path(variant), path(depths)
 
     output:
         file "${sample_id}_annotation.vcf"
-         tuple val(sample_id), path(variant), 
+         tuple val(sample_id), path(variant), path(depths),
                 emit: 'annotation' 
     
     script:
@@ -1026,11 +1031,11 @@ process SNIPPY {
                 pattern: "*_annotation.vcf", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant)
+        tuple val(sample_id), path(variant), path(depths)
 
     output:
         file "${sample_id}_annotation.vcf"
-         tuple val(sample_id), path(variant), 
+         tuple val(sample_id), path(variant), path(depths),
                 emit: 'annotation' 
     
     script:
@@ -1052,19 +1057,19 @@ process SNIPPY {
 //----------------------------------------
 process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
-    publishDir "${params.outdir}/consensus/bcftools",
-                pattern: "*.vcf", mode: 'copy'
+    publishDir "${params.outdir}/consensus/${params.consensus}",
+                pattern: "*.fa", mode: 'copy'
 
     input: 
         file ref 
-        tuple val(sample_id), path(variant)
+        tuple val(sample_id), path(variant), path(depths)
 
     output:
         file "${sample_id}_consensus.vcf"
        
     script:
         zipped = "${variant}.gz"
-        consensus = "${sample_id}_consensus.vcf"
+        consensus = "${sample_id}_${params.consensus}_consensus.fa"
 
     """
     bgzip $variant
@@ -1080,18 +1085,27 @@ process BCFTOOLS_CONSENSUS {
 //----------------------------------------
 process VCF_CONSENSUS {
     tag "$sample_id"
-    publishDir "${params.outdir}/consensus/vcf",
+    publishDir "${params.outdir}/consensus/${params.consensus}",
                 pattern: "*.txt", mode: 'copy'
-
+    echo true 
+    
     input:
-        tuple val(sample_id), path(variant)
+        file ref
+        tuple val(sample_id), path(variant), path(depths)
 
     output:
 
     script:
+        consensus = "${sample_id}_${params.consensus}_consensus.fa"
+        
 
     """
-    bcftools consensus
+    vcf_consensus_builder \\
+        -v $variant \\
+        -d $depths \\
+        -r $ref \\
+        -o $consensus \\
+        --sample-name $sample_id \\ 
     """
 }
 //----------------------------------------
@@ -1195,13 +1209,13 @@ workflow {
     // Consensus building 
     //----------------------------------------
     
-    if (params.consensus == 'vcf_consensus') {
+    if (params.consensus == 'bcftools') {
 
-        VCF_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+        BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
     
     } else {
 
-        BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+        VCF_CONSENSUS(ch_ref, SNPEFF.out.annotation)
     
     }
 }

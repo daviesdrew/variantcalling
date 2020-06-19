@@ -10,7 +10,7 @@ nextflow run main.nf \
 \
 --prediction snpeff --prediction_args "-soft_filter snpeff" \
 \
---consensus bcftools --consensus_args "-key bcftools" \
+--consensus vcf_consensus --consensus_args "-key bcftools" \
 \
 --reads "./data/CIN*R{1,2}*" \
 --ref "./data/ref.fa" \
