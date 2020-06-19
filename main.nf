@@ -293,10 +293,11 @@ process FASTQC {
 // PROCESSES: BWA 
 // Paired End read alignment 
 // Utilizes reference genome
+// Note: Bwa is the default option
 //----------------------------------------
 process BWA {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
+    publishDir "${params.outdir}/align/bwa",
                 pattern: "*.bam", mode: 'copy'
 
     input:
@@ -307,8 +308,8 @@ process BWA {
         tuple val(sample_id), path(bam), emit: 'align'
     
     script:
-        align = "${sample_id}_${params.align}_align_pe.sam"
-        bam = "${sample_id}_${params.align}_align_pe.bam"
+        align = "${sample_id}_bwa_align_pe.sam"
+        bam = "${sample_id}_bwa_align_pe.bam"
       
     """
     bwa index -a bwtsw $ref;
@@ -587,6 +588,7 @@ process BCFTOOLS_CONSENSUS {
 //----------------------------------------
 // PROCESSES: VCF_CONSENSUS
 // Build consensus sequence from variants
+// Note: vcf_consensus is the default 
 //----------------------------------------
 process VCF_CONSENSUS {
     tag "$sample_id"
