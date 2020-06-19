@@ -67,7 +67,22 @@ if (params.help) {
 //=============================================================================
 
 //----------------------------------------
-// HELPER FUNCTIONS: GENERAL TOOLS
+// HELPER FUNCTIONS: TOOL ARGS
+//----------------------------------------
+params.tool_args = [ 'align': 'align_args', 
+                     'variant': 'variant_args',
+                     'filter': 'filter_args',
+                     'prediction': 'prediction_args',
+                     'consensus': 'consensus_args' ] 
+
+//----------------------------------------
+
+//=============================================================================
+// HELPER FUNCTIONS
+//=============================================================================
+
+//----------------------------------------
+// HELPER FUNCTIONS: CHECK ARG EXISTENCE
 //----------------------------------------
 def check_arg_existence(tool, tool_args) {
     params[tool] = (params.containsKey(tool)) ?
@@ -79,18 +94,20 @@ def check_arg_existence(tool, tool_args) {
 }
 //----------------------------------------
 
+//----------------------------------------
+// HELPER FUNCTIONS: PRINT TOOL ARGS
+//----------------------------------------
+def print_tool_args(k, v) {
+    println("$k: ${params[k]} && $v: ${params[v]}") 
+}
+//----------------------------------------
+
 //=============================================================================
 // INPUT VALIDATION
 //=============================================================================
 
-arguments = [ 'align': 'align_args', 
-              'variant': 'variant_args',
-              'filter': 'filter_args',
-              'prediction': 'prediction_args',
-              'consensus': 'consensus_args' ] 
-
-arguments.each{ k, v -> check_arg_existence(k, v) }
-arguments.each{ k, v -> println("$k: ${params[k]} && $v: ${params[v]}") }
+params.tool_args.each{ k, v -> check_arg_existence(k, v) }
+params.tool_args.each{ k, v -> print_tool_args(k, v) }
 
 //=============================================================================
 // WORKFLOW RUN PARAMETERS LOGGING
@@ -538,9 +555,6 @@ process SNIPPY {
     """
 }
 //----------------------------------------
-
-
-
 
 //----------------------------------------
 // PROCESSES: BCFTOOLS_CONSENSUS
