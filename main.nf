@@ -615,6 +615,7 @@ summary['Pipeline Name']        = workflow.manifest.name
 summary['Pipeline Version']     = workflow.manifest.version
 summary['Run Name']             = custom_runName ?: workflow.runName
 summary['Reads']                = params.reads
+summary['Reference']            = params.ref
 
 summary['Aligner']              = params.align
 summary['Aligner Args']         = params.align_args
@@ -803,8 +804,8 @@ process BWA {
       
     """
     bwa index -a bwtsw $ref;
-    bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align \\
-    | samtools sort -@${task.cpus} \\
+    bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align;  
+    samtools sort $align -@${task.cpus} \\
     | samtools view -F4 -b -o $bam \\
 
     """
@@ -1096,7 +1097,7 @@ workflow {
     // Read Mapping
     //----------------------------------------
     
-    ch_ref = Channel.value(file("${baseDir}/data/ref.fa"))
+    ch_ref = Channel.value(file("${baseDir}/${params.ref}"))
 
     if (params.align == 'bowtie2') {
         
