@@ -1017,6 +1017,36 @@ process SNPEFF {
 //----------------------------------------
 
 //----------------------------------------
+// PROCESSES: SNIPPY
+// Annotates variants 
+//----------------------------------------
+process SNIPPY {
+    tag "$sample_id"
+    publishDir "${params.outdir}/variant/prediction",
+                pattern: "*_annotation.vcf", mode: 'copy'
+
+    input: 
+        tuple val(sample_id), path(variant)
+
+    output:
+        file "${sample_id}_annotation.vcf"
+         tuple val(sample_id), path(variant), 
+                emit: 'annotation' 
+    
+    script:
+        annotated = "${sample_id}_annotation.vcf"
+
+    """
+    java -jar /usr/local/src/snpEff/snpEff.jar asfv $variant -v \\
+    > $annotated
+    """
+}
+//----------------------------------------
+
+
+
+
+//----------------------------------------
 // PROCESSES: BCFTOOLS_CONSENSUS
 // Build consensus sequence from variants
 //----------------------------------------
