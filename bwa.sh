@@ -2,15 +2,11 @@
 
 nextflow run main.nf \
 \
---align bwa --align_args "-max_edit_dist bwa" \
-\
 --variant freebayes --variant_args "-theta freebayes" \
 \
 --filter bcftools --filter_args "--exclude 'A'" \
 \
 --prediction snpeff --prediction_args "-soft_filter snpeff" \
-\
---consensus \
 \
 --reads "./data/CIN*R{1,2}*" \
 --ref "./data/ref.fa" \

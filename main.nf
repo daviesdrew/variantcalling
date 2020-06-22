@@ -67,7 +67,22 @@ if (params.help) {
 //=============================================================================
 
 //----------------------------------------
-// HELPER FUNCTIONS: GENERAL TOOLS
+// HELPER FUNCTIONS: TOOL ARGS
+//----------------------------------------
+params.tool_args = [ 'align': 'align_args', 
+                     'variant': 'variant_args',
+                     'filter': 'filter_args',
+                     'prediction': 'prediction_args',
+                     'consensus': 'consensus_args' ] 
+
+//----------------------------------------
+
+//=============================================================================
+// HELPER FUNCTIONS
+//=============================================================================
+
+//----------------------------------------
+// HELPER FUNCTIONS: CHECK ARG EXISTENCE
 //----------------------------------------
 def check_arg_existence(tool, tool_args) {
     params[tool] = (params.containsKey(tool)) ?
@@ -79,18 +94,20 @@ def check_arg_existence(tool, tool_args) {
 }
 //----------------------------------------
 
+//----------------------------------------
+// HELPER FUNCTIONS: PRINT TOOL ARGS
+//----------------------------------------
+def print_tool_args(k, v) {
+    println("$k: ${params[k]} && $v: ${params[v]}") 
+}
+//----------------------------------------
+
 //=============================================================================
 // INPUT VALIDATION
 //=============================================================================
 
-arguments = [ 'align': 'align_args', 
-              'variant': 'variant_args',
-              'filter': 'filter_args',
-              'prediction': 'prediction_args',
-              'consensus': 'consensus_args' ] 
-
-arguments.each{ k, v -> check_arg_existence(k, v) }
-arguments.each{ k, v -> println("$k: ${params[k]} && $v: ${params[v]}") }
+params.tool_args.each{ k, v -> check_arg_existence(k, v) }
+params.tool_args.each{ k, v -> print_tool_args(k, v) }
 
 //=============================================================================
 // WORKFLOW RUN PARAMETERS LOGGING
@@ -276,10 +293,11 @@ process FASTQC {
 // PROCESSES: BWA 
 // Paired End read alignment 
 // Utilizes reference genome
+// Note: Bwa is the default option
 //----------------------------------------
 process BWA {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
+    publishDir "${params.outdir}/align/bwa",
                 pattern: "*.bam", mode: 'copy'
 
     input:
@@ -290,8 +308,8 @@ process BWA {
         tuple val(sample_id), path(bam), emit: 'align'
     
     script:
-        align = "${sample_id}_${params.align}_align_pe.sam"
-        bam = "${sample_id}_${params.align}_align_pe.bam"
+        align = "${sample_id}_bwa_align_pe.sam"
+        bam = "${sample_id}_bwa_align_pe.bam"
       
     """
     bwa index -a bwtsw $ref;
@@ -539,9 +557,6 @@ process SNIPPY {
 }
 //----------------------------------------
 
-
-
-
 //----------------------------------------
 // PROCESSES: BCFTOOLS_CONSENSUS
 // Build consensus sequence from variants
@@ -573,11 +588,12 @@ process BCFTOOLS_CONSENSUS {
 //----------------------------------------
 // PROCESSES: VCF_CONSENSUS
 // Build consensus sequence from variants
+// Note: vcf_consensus is the default 
 //----------------------------------------
 process VCF_CONSENSUS {
     tag "$sample_id"
-    publishDir "${params.outdir}/consensus/${params.consensus}",
-                pattern: "*.txt", mode: 'copy'
+    publishDir "${params.outdir}/consensus/vcf",
+                pattern: "*.fa", mode: 'copy'
     echo true 
     
     input:
@@ -585,9 +601,10 @@ process VCF_CONSENSUS {
         tuple val(sample_id), path(variant), path(depths)
 
     output:
+        file "${sample_id}_vcf_consensus.fa"
 
     script:
-        consensus = "${sample_id}_${params.consensus}_consensus.fa"
+        consensus = "${sample_id}_vcf_consensus.fa"
         
 
     """
@@ -596,7 +613,7 @@ process VCF_CONSENSUS {
         -d $depths \\
         -r $ref \\
         -o $consensus \\
-        --sample-name $sample_id \\ 
+        --sample-name $sample_id
     """
 }
 //----------------------------------------
