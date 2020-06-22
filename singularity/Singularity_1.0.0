@@ -1,5 +1,5 @@
-Bootstrap: Docker
-From: 
+Bootstrap: docker
+From: conda:4.8.3
 
 %labels
     MAINTAINER Drew Davies
