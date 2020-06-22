@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: conda:4.8.3
+From: daviesdrew/variantcalling
 
 %labels
     MAINTAINER Drew Davies
