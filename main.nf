@@ -482,24 +482,19 @@ process BCFTOOLS_STATS {
     tag "$sample_id"
     publishDir "${params.outdir}/variant",
                 pattern: "*_stats.txt", mode: 'copy'
-    publishDir "${params.outdir}/logs/bcftools_stats",
-                pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         tuple val(sample_id), path(variant), 
               path(ref), path(depths)
 
     output:
-        file "${sample_id}.log"
         file "${sample_id}_stats.txt"
             
     script: 
         stats = "${sample_id}_stats.txt"
-        stats_log = "${sample_id}.log"
 
     """
     bcftools stats -F $ref $variant -v > $stats; 
-    cat .command.log | tee $stats_log;
     """
 }
 //----------------------------------------
