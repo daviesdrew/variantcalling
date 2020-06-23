@@ -299,12 +299,14 @@ process BWA {
     tag "$sample_id"
     publishDir "${params.outdir}/align/bwa",
                 pattern: "*.bam", mode: 'copy'
+    echo true
 
     input:
         file ref            
         tuple val(sample_id), path(r1), path(r2)
     
     output:
+        file ".command.log"
         tuple val(sample_id), path(bam), 
               val(align_dir), emit: 'align'
     
@@ -317,7 +319,8 @@ process BWA {
     bwa index -a bwtsw $ref;
     bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align;  
     samtools sort $align -@${task.cpus} \\
-    | samtools view -F4 -b -o $bam \\
+    | samtools view -F4 -b -o $bam;
+    echo "${cout}"
 
     """
 }
@@ -712,7 +715,7 @@ workflow {
     // Annotate Genomic Variants    
     //----------------------------------------
 
-    if (params.prediction == 'other_annotation_tool') {
+    if (params.prediction == 'snpeff') {
         
         SNPEFF(BCFTOOLS_FILTER.out.variant, 
                FASTP.out.reads)
