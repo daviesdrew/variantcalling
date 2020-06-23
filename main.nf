@@ -305,11 +305,13 @@ process BWA {
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        tuple val(sample_id), path(bam), emit: 'align'
+        tuple val(sample_id), path(bam), 
+              val(align_dir), emit: 'align'
     
     script:
         align = "${sample_id}_bwa_align_pe.sam"
         bam = "${sample_id}_bwa_align_pe.bam"
+        align_dir = "${params.outdir}/align/bwa"
       
     """
     bwa index -a bwtsw $ref;
@@ -337,12 +339,14 @@ process BOWTIE2 {
 
     output:
         file "${sample_id}_${params.align}_align_pe.bam"
-        tuple val(sample_id), path(bam), emit: 'align'
+        tuple val(sample_id), path(bam),
+              val(align_dir), emit: 'align'
 
     script:
         index_dir = "./index"
         indexes = "./index/index"
         bam = "${sample_id}_bowtie2_align_pe.bam"
+        align_dir = "${params.outdir}/align/${params.align}"
     
     """
     sudo mkdir $index_dir;
@@ -372,9 +376,11 @@ process MINIMAP2 {
     
     output:
         file "${sample_id}_${params.align}_align_pe.bam"
-        tuple val(sample_id), path(bam), emit: 'align'
+        tuple val(sample_id), path(bam), 
+              val(align_dir), emit: 'align'
     
     script:
+        align_dir = "${params.outdir}/align/${params.align}"
         bam = "${sample_id}_${params.align}_align_pe.bam"
 
     """
@@ -392,11 +398,11 @@ process MINIMAP2 {
 //----------------------------------------
 process BAMINDEX {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
+    publishDir "${align_dir}",
                 pattern: "*.bai", mode: "copy"
 
     input: 
-        tuple val(sample_id), path(align)
+        tuple val(sample_id), path(align), val(align_dir)
 
     output:
         file "${sample_id}_${params.align}_align_pe.bai"
@@ -489,8 +495,8 @@ process BCFTOOLS_FILTER {
               path(ref), path(depths)
 
     output:
-        tuple val(sample_id), path(filtered), path(depths),
-                emit: 'variant'
+        tuple path(filtered), path(ref), path(depths), 
+              emit: 'variant'
         file "${sample_id}_filtered.vcf"
             
     script: 
@@ -506,6 +512,7 @@ process BCFTOOLS_FILTER {
 //----------------------------------------
 // PROCESSES: SNPEFF
 // Annotates variants 
+// Note: This process is currently deprecated
 //----------------------------------------
 process SNPEFF {
     tag "$sample_id"
@@ -513,8 +520,8 @@ process SNPEFF {
                 pattern: "*_annotation.vcf", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant), path(depths)
-
+        tuple path(variant), path(ref), path(depths)
+        tuple val(sample_id), path(r1), path(r2)
     output:
         file "${sample_id}_annotation.vcf"
          tuple val(sample_id), path(variant), path(depths),
@@ -536,23 +543,24 @@ process SNPEFF {
 //----------------------------------------
 process SNIPPY {
     tag "$sample_id"
-    publishDir "${params.outdir}/variant/prediction",
-                pattern: "*_annotation.vcf", mode: 'copy'
+    publishDir "${params.outdir}/variant/snippy",
+                pattern: "*snps.*", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant), path(depths)
+        tuple path(variant), path(ref), path(depths)
+        tuple val(sample_id), path(r1), path(r2)
 
     output:
-        file "${sample_id}_annotation.vcf"
          tuple val(sample_id), path(variant), path(depths),
                 emit: 'annotation' 
     
     script:
-        annotated = "${sample_id}_annotation.vcf"
+        outdir = "${params.outdir}/variant/snippy"
 
     """
-    java -jar /usr/local/src/snpEff/snpEff.jar asfv $variant -v \\
-    > $annotated
+    snippy --cpus ${task.cpus} \
+    --ref $ref --R1 $r1 --R2 $r2 \
+    --outdir $outdir
     """
 }
 //----------------------------------------
@@ -706,24 +714,27 @@ workflow {
 
     if (params.prediction == 'other_annotation_tool') {
         
-        SNPEFF(BCFTOOLS_FILTER.out.variant)
+        SNPEFF(BCFTOOLS_FILTER.out.variant, 
+               FASTP.out.reads)
     
     } else {
 
-        SNPEFF(BCFTOOLS_FILTER.out.variant)
+        SNIPPY(BCFTOOLS_FILTER.out.variant, 
+               FASTP.out.reads)
 
     }
+    
     //----------------------------------------
     // Consensus building 
     //----------------------------------------
     
     if (params.consensus == 'bcftools') {
 
-        BCFTOOLS_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+        BCFTOOLS_CONSENSUS(ch_ref, SNIPPY.out.annotation)
     
     } else {
 
-        VCF_CONSENSUS(ch_ref, SNPEFF.out.annotation)
+        VCF_CONSENSUS(ch_ref, SNIPPY.out.annotation)
     
     }
 }
