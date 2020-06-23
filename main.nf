@@ -107,7 +107,7 @@ def print_tool_args(tool, tool_args) {
 // INPUT VALIDATION
 //=============================================================================
 
-params.tool_args.each{ k, v -> check_arg_existence(k, v) }
+//params.tool_args.each{ k, v -> check_arg_existence(k, v) }
 params.tool_args.each{ k, v -> print_tool_args(k, v) }
 
 //=============================================================================
