@@ -67,37 +67,10 @@ if (params.help) {
 //=============================================================================
 
 //----------------------------------------
-// HELPER FUNCTIONS: TOOL ARGS
-//----------------------------------------
-params.tool_args = [ 'align': ['align_args', 'bwa'], 
-                     'variant': ['variant_args', 'freebayes'],
-                     'filter': ['filter_args', 'bcftools'],
-                     'prediction': ['prediction_args', 'snippy'],
-                     'consensus': ['consensus_args', 'vcf_consensus']
-                    ]
-//----------------------------------------
-
-//=============================================================================
-// HELPER FUNCTIONS
-//=============================================================================
-
-//----------------------------------------
-// HELPER FUNCTIONS: CHECK ARG EXISTENCE
-//----------------------------------------
-def check_arg_existence(tool, tool_args) {
-    params[tool] = (params.containsKey(tool)) ?
-                        params[tool] :
-                        tool_args[1]
-    params[tool_args[0]] = (params.containsKey(tool_args[0])) ?
-                            params[tool_args[0]] :
-                            ""
-}
-//----------------------------------------
-
-//----------------------------------------
 // HELPER FUNCTIONS: PRINT TOOL ARGS
 //----------------------------------------
 def print_tool_args(tool, tool_args) {
+    println(tool_args)
     println("""$tool: ${params[tool]}
     => ${tool_args[0]}: ${params[tool_args[0]]}\n""") 
 }
@@ -107,8 +80,7 @@ def print_tool_args(tool, tool_args) {
 // INPUT VALIDATION
 //=============================================================================
 
-//params.tool_args.each{ k, v -> check_arg_existence(k, v) }
-params.tool_args.each{ k, v -> print_tool_args(k, v) }
+params.tool_args.each{ k, v ->  print_tool_args(k, v) }
 
 //=============================================================================
 // WORKFLOW RUN PARAMETERS LOGGING
