@@ -605,22 +605,26 @@ process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
     publishDir "${params.outdir}/consensus/${params.consensus}",
                 pattern: "*.fa", mode: 'copy'
+    publishDir "${params.outdir}/logs/${params.consensus}",
+                pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         file ref 
         tuple val(sample_id), path(variant), path(depths)
 
     output:
+        file "${sample_id}.log"
         file "${sample_id}_consensus.vcf"
        
     script:
         zipped = "${variant}.gz"
         consensus = "${sample_id}_${params.consensus}_consensus.fa"
-
+        bcftools_consensus_log = "${sample_id}.log"
     """
-    bgzip $variant
-    tabix -p vcf $zipped
-    bcftools consensus -f $ref $zipped > $consensus
+    bgzip $variant;
+    tabix -p vcf $zipped;
+    bcftools consensus -f $ref $zipped > $consensus;
+    cat .command.log | tee $bcftools_consensus_log;
     """
 }
 //----------------------------------------
@@ -634,18 +638,19 @@ process VCF_CONSENSUS {
     tag "$sample_id"
     publishDir "${params.outdir}/consensus/vcf",
                 pattern: "*.fa", mode: 'copy'
-    echo true 
-    
+    publishDir "${params.outdir}/logs/vcf", 
+                pattern: "${sample_id}.log", mode: "copy" 
     input:
         file ref
         tuple val(sample_id), path(variant), path(depths)
 
     output:
+        file "${sample_id}.log"
         file "${sample_id}_vcf_consensus.fa"
 
     script:
         consensus = "${sample_id}_vcf_consensus.fa"
-        
+        vcf_consensus_log = "${sample_id}.log"
 
     """
     vcf_consensus_builder \\
@@ -653,7 +658,8 @@ process VCF_CONSENSUS {
         -d $depths \\
         -r $ref \\
         -o $consensus \\
-        --sample-name $sample_id
+        --sample-name $sample_id;
+    cat .command.log | tee $vcf_consensus_log;
     """
 }
 //----------------------------------------
