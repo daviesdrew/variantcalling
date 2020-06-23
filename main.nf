@@ -276,7 +276,7 @@ process BWA {
                 pattern: "${sample_id}.log", mode: 'copy'
     
     input:
-        file ref            
+        val ref            
         tuple val(sample_id), path(r1), path(r2)
     
     output:
@@ -662,7 +662,7 @@ workflow {
     // Read Mapping
     //----------------------------------------
     
-    ch_ref = Channel.value(file("${baseDir}/${params.ref}"))
+    ch_ref = Channel.value(file("${params.ref}"))
 
     if (params.align == 'bowtie2') {
         
