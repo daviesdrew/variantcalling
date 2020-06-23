@@ -8,7 +8,7 @@ From: daviesdrew/variantcalling
 
 
 %environment 
-    PATH=/opt/conda/envs/variant_1.0.0/bin:$PATH
+    PATH=/opt/conda/envs/variantcalling/bin:$PATH
     export PATH
 
 %files 
