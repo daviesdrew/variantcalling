@@ -99,7 +99,7 @@ def check_arg_existence(tool, tool_args) {
 //----------------------------------------
 def print_tool_args(tool, tool_args) {
     println("""$tool: ${params[tool]}
-    => ${tool_args[0]}: ${params[tool_args[0]]}""") 
+    => ${tool_args[0]}: ${params[tool_args[0]]}\n""") 
 }
 //----------------------------------------
 
@@ -323,7 +323,7 @@ process BWA {
     bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align;  
     samtools sort $align -@${task.cpus} \\
     | samtools view -F4 -b -o $bam;
-    tee .command.log > $bwa_log;  
+    cat .command.log | tee $bwa_log;  
     """
 }
 //----------------------------------------
@@ -365,7 +365,7 @@ process BOWTIE2 {
             -x $indexes -1 $r1 -2 $r2 \\
     | samtools sort -@${task.cpus} \\
     | samtools view -F4 -b -o $bam;
-    tee .command.log > $bowtie2_log; 
+    cat .command.log | tee $bowtie2_log; 
     """
 }
 //----------------------------------------
@@ -402,7 +402,7 @@ process MINIMAP2 {
         -ax sr $ref $r1 $r2 \\
         | samtools sort -@${task.cpus} \\
         | samtools view -F4 -b -o $bam;
-        tee .command.log > $minimap2_log;
+        cat .command.log | tee $minimap2_log;
     """
 }
 //----------------------------------------
@@ -443,28 +443,32 @@ process BAMINDEX {
 //----------------------------------------
 process FREEBAYES {
     tag "$sample_id"
-    publishDir "${params.outdir}/variant/freebayes",
+    publishDir "${params.outdir}/variant/${params.variant}",
                 pattern: "${sample_id}*.vcf", mode: 'copy'
-    publishDir "${params.outdir}/variant/freebayes", 
-                pattern: "${sample_id}*.txt", mode: 'copy'
-    echo true 
+    //publishDir "${params.outdir}/variant/${params.variant}", 
+    //            pattern: "${sample_id}*.txt", mode: 'copy'
+    publishDir "${params.outdir}/logs/${params.variant}",
+                pattern: "${sample_id}.log", mode: "copy"
+
     input: 
         file ref
         tuple val(sample_id), path(bam), path(depths)
 
     output:
+        file "${sample_id}.log"
         tuple val(sample_id), path(variant), path(ref), 
               path(depths), emit: 'variant'
     
     script: 
         variant = "${sample_id}.vcf"
-        contamination = "${sample_id}_contamination.txt"
+        freebayes_log = "${sample_id}.log"
+        //contamination = "${sample_id}_contamination.txt"
 
     """
     freebayes --gvcf --use-mapping-quality \\
     --genotype-qualities \\
-    -f $ref -g 1000 \\
-     $bam > $variant 
+    -f $ref -g 1000 $bam > $variant; 
+    cat .command.log | tee $freebayes_log;
     """
     //--contamination-estimates $contamination \\ 
 }
@@ -478,20 +482,24 @@ process BCFTOOLS_STATS {
     tag "$sample_id"
     publishDir "${params.outdir}/variant",
                 pattern: "*_stats.txt", mode: 'copy'
+    publishDir "${params.outdir}/logs/bcftools_stats",
+                pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         tuple val(sample_id), path(variant), 
               path(ref), path(depths)
 
     output:
+        file "${sample_id}.log"
         file "${sample_id}_stats.txt"
             
     script: 
         stats = "${sample_id}_stats.txt"
+        stats_log = "${sample_id}.log"
 
     """
     bcftools stats -F $ref $variant -v > $stats; 
-    
+    cat .command.log | tee $stats_log;
     """
 }
 //----------------------------------------
@@ -504,22 +512,27 @@ process BCFTOOLS_FILTER {
     tag "$sample_id"
     publishDir "${params.outdir}/variant",
                 pattern: "*_filtered.vcf", mode: 'copy'
+    publishDir "${params.outdir}/logs/${params.filter}",
+                pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         tuple val(sample_id), path(variant), 
               path(ref), path(depths)
 
     output:
+        file "${sample_id}_filtered.vcf"
+        file "${sample_id}.log"
         tuple path(filtered), path(ref), path(depths), 
               emit: 'variant'
-        file "${sample_id}_filtered.vcf"
             
     script: 
         options = "${params.filter_args}"
         filtered = "${sample_id}_filtered.vcf"
+        bcftools_filter_log = "${sample_id}.log"
     
     """
     bcftools filter $options $variant -o $filtered; 
+    cat .command.log | tee $bcftools_filter_log;
     """
 }
 //----------------------------------------
@@ -560,22 +573,26 @@ process SNIPPY {
     tag "$sample_id"
     publishDir "${params.outdir}/variant/snippy",
                 pattern: "*snps.*", mode: 'copy'
-
+    publishDir "${params.outdir}/logs/${params.prediction}",
+                pattern: "${sample_id}.log", mode: "copy"
+    
     input: 
         tuple path(variant), path(ref), path(depths)
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-         tuple val(sample_id), path(variant), path(depths),
+        file "${sample_id}.log"
+        tuple val(sample_id), path(variant), path(depths),
                 emit: 'annotation' 
     
     script:
         outdir = "${params.outdir}/variant/snippy"
-
+        snippy_log = "${sample_id}.log"
     """
     snippy --cpus ${task.cpus} \
     --ref $ref --R1 $r1 --R2 $r2 \
-    --outdir $outdir
+    --outdir $outdir;
+    cat .command.log | tee $snippy_log;
     """
 }
 //----------------------------------------
