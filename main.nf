@@ -301,7 +301,7 @@ process BWA {
     publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: 'copy'
     publishDir "${params.outdir}/logs/${params.align}",
-                pattern: "*.log", mode: 'copy'
+                pattern: "${sample_id}.log", mode: 'copy'
     
     input:
         file ref            
@@ -379,6 +379,8 @@ process MINIMAP2 {
     tag "$sample_id"
     publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: "copy"
+    publishDir "${params.outdir}/logs/${params.align}",
+                pattern: "${sample_id}.log", mode: "copy"
     
     input:
         file ref            
@@ -386,18 +388,21 @@ process MINIMAP2 {
     
     output:
         file "${sample_id}_${params.align}_align_pe.bam"
+        file "${sample_id}.log"
         tuple val(sample_id), path(bam), 
               val(align_dir), emit: 'align'
     
     script:
         align_dir = "${params.outdir}/align/${params.align}"
         bam = "${sample_id}_${params.align}_align_pe.bam"
+        minimap2_log = "${sample_id}.log"
 
     """
     minimap2 -a -t ${task.cpus} \\
         -ax sr $ref $r1 $r2 \\
         | samtools sort -@${task.cpus} \\
-        | samtools view -F4 -b -o $bam 
+        | samtools view -F4 -b -o $bam;
+        tee .command.log > $minimap2_log;
     """
 }
 //----------------------------------------
