@@ -337,6 +337,8 @@ process BOWTIE2 {
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
     publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: 'copy'
+    publishDir "${params.outdir}/logs/${params.align}",
+                pattern: "${sample_id}.log", mode: "copy"
 
     input:
         file ref
@@ -344,6 +346,7 @@ process BOWTIE2 {
 
     output:
         file "${sample_id}_${params.align}_align_pe.bam"
+        file "${sample_id}.log"
         tuple val(sample_id), path(bam),
               val(align_dir), emit: 'align'
 
@@ -352,7 +355,8 @@ process BOWTIE2 {
         indexes = "./index/index"
         bam = "${sample_id}_bowtie2_align_pe.bam"
         align_dir = "${params.outdir}/align/${params.align}"
-    
+        bowtie2_log = "${sample_id}.log"
+         
     """
     sudo mkdir $index_dir;
     sudo chmod 777 $index_dir;
@@ -360,7 +364,8 @@ process BOWTIE2 {
     bowtie2 --threads ${task.cpus} \\
             -x $indexes -1 $r1 -2 $r2 \\
     | samtools sort -@${task.cpus} \\
-    | samtools view -F4 -b -o $bam 
+    | samtools view -F4 -b -o $bam;
+    tee .command.log > $bowtie2_log; 
     """
 }
 //----------------------------------------
