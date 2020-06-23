@@ -6,8 +6,6 @@ nextflow run main.nf \
 \
 --filter bcftools --filter_args "--exclude 'A'" \
 \
---prediction snpeff --prediction_args "-soft_filter snpeff" \
-\
 --reads "./data/CIN*R{1,2}*" \
 --ref "./data/ref.fa" \
 \

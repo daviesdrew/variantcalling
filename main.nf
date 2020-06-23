@@ -69,12 +69,12 @@ if (params.help) {
 //----------------------------------------
 // HELPER FUNCTIONS: TOOL ARGS
 //----------------------------------------
-params.tool_args = [ 'align': 'align_args', 
-                     'variant': 'variant_args',
-                     'filter': 'filter_args',
-                     'prediction': 'prediction_args',
-                     'consensus': 'consensus_args' ] 
-
+params.tool_args = [ 'align': ['align_args', 'bwa'], 
+                     'variant': ['variant_args', 'freebayes'],
+                     'filter': ['filter_args', 'bcftools'],
+                     'prediction': ['prediction_args', 'snippy'],
+                     'consensus': ['consensus_args', 'vcf_consensus']
+                    ]
 //----------------------------------------
 
 //=============================================================================
@@ -87,18 +87,19 @@ params.tool_args = [ 'align': 'align_args',
 def check_arg_existence(tool, tool_args) {
     params[tool] = (params.containsKey(tool)) ?
                         params[tool] :
-                        null
-    params[tool_args] = (params.containsKey(tool_args)) ?
-                        params[tool_args] :
-                        ""
+                        tool_args[1]
+    params[tool_args[0]] = (params.containsKey(tool_args[0])) ?
+                            params[tool_args[0]] :
+                            ""
 }
 //----------------------------------------
 
 //----------------------------------------
 // HELPER FUNCTIONS: PRINT TOOL ARGS
 //----------------------------------------
-def print_tool_args(k, v) {
-    println("$k: ${params[k]} && $v: ${params[v]}") 
+def print_tool_args(tool, tool_args) {
+    println("""$tool: ${params[tool]}
+    => ${tool_args[0]}: ${params[tool_args[0]]}""") 
 }
 //----------------------------------------
 
@@ -297,16 +298,17 @@ process FASTQC {
 //----------------------------------------
 process BWA {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/bwa",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: 'copy'
-    echo true
-
+    publishDir "${params.outdir}/logs/${params.align}",
+                pattern: "*.log", mode: 'copy'
+    
     input:
         file ref            
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        file ".command.log"
+        file "${sample_id}.log"
         tuple val(sample_id), path(bam), 
               val(align_dir), emit: 'align'
     
@@ -314,14 +316,14 @@ process BWA {
         align = "${sample_id}_bwa_align_pe.sam"
         bam = "${sample_id}_bwa_align_pe.bam"
         align_dir = "${params.outdir}/align/bwa"
+        bwa_log = "${sample_id}.log"
       
     """
     bwa index -a bwtsw $ref;
     bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align;  
     samtools sort $align -@${task.cpus} \\
     | samtools view -F4 -b -o $bam;
-    echo "${cout}"
-
+    tee .command.log > $bwa_log;  
     """
 }
 //----------------------------------------
@@ -716,7 +718,7 @@ workflow {
     //----------------------------------------
 
     if (params.prediction == 'snpeff') {
-        
+        //deprecated until further notice        
         SNPEFF(BCFTOOLS_FILTER.out.variant, 
                FASTP.out.reads)
     
