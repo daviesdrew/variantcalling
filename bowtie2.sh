@@ -6,11 +6,7 @@ nextflow run main.nf \
 \
 --variant freebayes --variant_args "-theta freebayes" \
 \
---filter bcftools --filter_args "-exclude 'A'" \
-\
---prediction snpeff --prediction_args "-soft_filter snpeff" \
-\
---consensus vcf_consensus --consensus_args "-key bcftools" \
+--filter bcftools --filter_args "--exclude 'A'" \
 \
 --reads "./data/CIN*R{1,2}*" \
 --ref "./data/ref.fa" \
