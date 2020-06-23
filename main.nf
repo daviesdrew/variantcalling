@@ -69,12 +69,12 @@ if (params.help) {
 //----------------------------------------
 // HELPER FUNCTIONS: TOOL ARGS
 //----------------------------------------
-params.tool_args = [ 'align': 'align_args', 
-                     'variant': 'variant_args',
-                     'filter': 'filter_args',
-                     'prediction': 'prediction_args',
-                     'consensus': 'consensus_args' ] 
-
+params.tool_args = [ 'align': ['align_args', 'bwa'], 
+                     'variant': ['variant_args', 'freebayes'],
+                     'filter': ['filter_args', 'bcftools'],
+                     'prediction': ['prediction_args', 'snippy'],
+                     'consensus': ['consensus_args', 'vcf_consensus']
+                    ]
 //----------------------------------------
 
 //=============================================================================
@@ -87,18 +87,19 @@ params.tool_args = [ 'align': 'align_args',
 def check_arg_existence(tool, tool_args) {
     params[tool] = (params.containsKey(tool)) ?
                         params[tool] :
-                        null
-    params[tool_args] = (params.containsKey(tool_args)) ?
-                        params[tool_args] :
-                        ""
+                        tool_args[1]
+    params[tool_args[0]] = (params.containsKey(tool_args[0])) ?
+                            params[tool_args[0]] :
+                            ""
 }
 //----------------------------------------
 
 //----------------------------------------
 // HELPER FUNCTIONS: PRINT TOOL ARGS
 //----------------------------------------
-def print_tool_args(k, v) {
-    println("$k: ${params[k]} && $v: ${params[v]}") 
+def print_tool_args(tool, tool_args) {
+    println("""$tool: ${params[tool]}
+    => ${tool_args[0]}: ${params[tool_args[0]]}\n""") 
 }
 //----------------------------------------
 
@@ -297,14 +298,17 @@ process FASTQC {
 //----------------------------------------
 process BWA {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/bwa",
+    publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: 'copy'
-
+    publishDir "${params.outdir}/logs/${params.align}",
+                pattern: "${sample_id}.log", mode: 'copy'
+    
     input:
         file ref            
         tuple val(sample_id), path(r1), path(r2)
     
     output:
+        file "${sample_id}.log"
         tuple val(sample_id), path(bam), 
               val(align_dir), emit: 'align'
     
@@ -312,13 +316,14 @@ process BWA {
         align = "${sample_id}_bwa_align_pe.sam"
         bam = "${sample_id}_bwa_align_pe.bam"
         align_dir = "${params.outdir}/align/bwa"
+        bwa_log = "${sample_id}.log"
       
     """
     bwa index -a bwtsw $ref;
     bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align;  
     samtools sort $align -@${task.cpus} \\
-    | samtools view -F4 -b -o $bam \\
-
+    | samtools view -F4 -b -o $bam;
+    cat .command.log | tee $bwa_log;  
     """
 }
 //----------------------------------------
@@ -332,6 +337,8 @@ process BOWTIE2 {
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
     publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: 'copy'
+    publishDir "${params.outdir}/logs/${params.align}",
+                pattern: "${sample_id}.log", mode: "copy"
 
     input:
         file ref
@@ -339,6 +346,7 @@ process BOWTIE2 {
 
     output:
         file "${sample_id}_${params.align}_align_pe.bam"
+        file "${sample_id}.log"
         tuple val(sample_id), path(bam),
               val(align_dir), emit: 'align'
 
@@ -347,7 +355,8 @@ process BOWTIE2 {
         indexes = "./index/index"
         bam = "${sample_id}_bowtie2_align_pe.bam"
         align_dir = "${params.outdir}/align/${params.align}"
-    
+        bowtie2_log = "${sample_id}.log"
+         
     """
     sudo mkdir $index_dir;
     sudo chmod 777 $index_dir;
@@ -355,7 +364,8 @@ process BOWTIE2 {
     bowtie2 --threads ${task.cpus} \\
             -x $indexes -1 $r1 -2 $r2 \\
     | samtools sort -@${task.cpus} \\
-    | samtools view -F4 -b -o $bam 
+    | samtools view -F4 -b -o $bam;
+    cat .command.log | tee $bowtie2_log; 
     """
 }
 //----------------------------------------
@@ -369,6 +379,8 @@ process MINIMAP2 {
     tag "$sample_id"
     publishDir "${params.outdir}/align/${params.align}",
                 pattern: "*.bam", mode: "copy"
+    publishDir "${params.outdir}/logs/${params.align}",
+                pattern: "${sample_id}.log", mode: "copy"
     
     input:
         file ref            
@@ -376,18 +388,21 @@ process MINIMAP2 {
     
     output:
         file "${sample_id}_${params.align}_align_pe.bam"
+        file "${sample_id}.log"
         tuple val(sample_id), path(bam), 
               val(align_dir), emit: 'align'
     
     script:
         align_dir = "${params.outdir}/align/${params.align}"
         bam = "${sample_id}_${params.align}_align_pe.bam"
+        minimap2_log = "${sample_id}.log"
 
     """
     minimap2 -a -t ${task.cpus} \\
         -ax sr $ref $r1 $r2 \\
         | samtools sort -@${task.cpus} \\
-        | samtools view -F4 -b -o $bam 
+        | samtools view -F4 -b -o $bam;
+        cat .command.log | tee $minimap2_log;
     """
 }
 //----------------------------------------
@@ -428,28 +443,32 @@ process BAMINDEX {
 //----------------------------------------
 process FREEBAYES {
     tag "$sample_id"
-    publishDir "${params.outdir}/variant/freebayes",
+    publishDir "${params.outdir}/variant/${params.variant}",
                 pattern: "${sample_id}*.vcf", mode: 'copy'
-    publishDir "${params.outdir}/variant/freebayes", 
-                pattern: "${sample_id}*.txt", mode: 'copy'
-    echo true 
+    //publishDir "${params.outdir}/variant/${params.variant}", 
+    //            pattern: "${sample_id}*.txt", mode: 'copy'
+    publishDir "${params.outdir}/logs/${params.variant}",
+                pattern: "${sample_id}.log", mode: "copy"
+
     input: 
         file ref
         tuple val(sample_id), path(bam), path(depths)
 
     output:
+        file "${sample_id}.log"
         tuple val(sample_id), path(variant), path(ref), 
               path(depths), emit: 'variant'
     
     script: 
         variant = "${sample_id}.vcf"
-        contamination = "${sample_id}_contamination.txt"
+        freebayes_log = "${sample_id}.log"
+        //contamination = "${sample_id}_contamination.txt"
 
     """
     freebayes --gvcf --use-mapping-quality \\
     --genotype-qualities \\
-    -f $ref -g 1000 \\
-     $bam > $variant 
+    -f $ref -g 1000 $bam > $variant; 
+    cat .command.log | tee $freebayes_log;
     """
     //--contamination-estimates $contamination \\ 
 }
@@ -476,7 +495,6 @@ process BCFTOOLS_STATS {
 
     """
     bcftools stats -F $ref $variant -v > $stats; 
-    
     """
 }
 //----------------------------------------
@@ -489,22 +507,27 @@ process BCFTOOLS_FILTER {
     tag "$sample_id"
     publishDir "${params.outdir}/variant",
                 pattern: "*_filtered.vcf", mode: 'copy'
+    publishDir "${params.outdir}/logs/${params.filter}",
+                pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         tuple val(sample_id), path(variant), 
               path(ref), path(depths)
 
     output:
+        file "${sample_id}_filtered.vcf"
+        file "${sample_id}.log"
         tuple path(filtered), path(ref), path(depths), 
               emit: 'variant'
-        file "${sample_id}_filtered.vcf"
             
     script: 
         options = "${params.filter_args}"
         filtered = "${sample_id}_filtered.vcf"
+        bcftools_filter_log = "${sample_id}.log"
     
     """
     bcftools filter $options $variant -o $filtered; 
+    cat .command.log | tee $bcftools_filter_log;
     """
 }
 //----------------------------------------
@@ -545,22 +568,26 @@ process SNIPPY {
     tag "$sample_id"
     publishDir "${params.outdir}/variant/snippy",
                 pattern: "*snps.*", mode: 'copy'
-
+    publishDir "${params.outdir}/logs/${params.prediction}",
+                pattern: "${sample_id}.log", mode: "copy"
+    
     input: 
         tuple path(variant), path(ref), path(depths)
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-         tuple val(sample_id), path(variant), path(depths),
+        file "${sample_id}.log"
+        tuple val(sample_id), path(variant), path(depths),
                 emit: 'annotation' 
     
     script:
         outdir = "${params.outdir}/variant/snippy"
-
+        snippy_log = "${sample_id}.log"
     """
     snippy --cpus ${task.cpus} \
     --ref $ref --R1 $r1 --R2 $r2 \
-    --outdir $outdir
+    --outdir $outdir;
+    cat .command.log | tee $snippy_log;
     """
 }
 //----------------------------------------
@@ -573,22 +600,26 @@ process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
     publishDir "${params.outdir}/consensus/${params.consensus}",
                 pattern: "*.fa", mode: 'copy'
+    publishDir "${params.outdir}/logs/${params.consensus}",
+                pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         file ref 
         tuple val(sample_id), path(variant), path(depths)
 
     output:
+        file "${sample_id}.log"
         file "${sample_id}_consensus.vcf"
        
     script:
         zipped = "${variant}.gz"
         consensus = "${sample_id}_${params.consensus}_consensus.fa"
-
+        bcftools_consensus_log = "${sample_id}.log"
     """
-    bgzip $variant
-    tabix -p vcf $zipped
-    bcftools consensus -f $ref $zipped > $consensus
+    bgzip $variant;
+    tabix -p vcf $zipped;
+    bcftools consensus -f $ref $zipped > $consensus;
+    cat .command.log | tee $bcftools_consensus_log;
     """
 }
 //----------------------------------------
@@ -602,18 +633,19 @@ process VCF_CONSENSUS {
     tag "$sample_id"
     publishDir "${params.outdir}/consensus/vcf",
                 pattern: "*.fa", mode: 'copy'
-    echo true 
-    
+    publishDir "${params.outdir}/logs/vcf", 
+                pattern: "${sample_id}.log", mode: "copy" 
     input:
         file ref
         tuple val(sample_id), path(variant), path(depths)
 
     output:
+        file "${sample_id}.log"
         file "${sample_id}_vcf_consensus.fa"
 
     script:
         consensus = "${sample_id}_vcf_consensus.fa"
-        
+        vcf_consensus_log = "${sample_id}.log"
 
     """
     vcf_consensus_builder \\
@@ -621,7 +653,8 @@ process VCF_CONSENSUS {
         -d $depths \\
         -r $ref \\
         -o $consensus \\
-        --sample-name $sample_id
+        --sample-name $sample_id;
+    cat .command.log | tee $vcf_consensus_log;
     """
 }
 //----------------------------------------
@@ -712,8 +745,8 @@ workflow {
     // Annotate Genomic Variants    
     //----------------------------------------
 
-    if (params.prediction == 'other_annotation_tool') {
-        
+    if (params.prediction == 'snpeff') {
+        //deprecated until further notice        
         SNPEFF(BCFTOOLS_FILTER.out.variant, 
                FASTP.out.reads)
     
