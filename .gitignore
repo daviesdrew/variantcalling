@@ -6,3 +6,11 @@ results/
 tests/
 testing/
 *.pyc
+*.swp
+*.log.*
+*.simg
+results/*
+scripts/results/*
+scripts/results*
+scripts/work/*
+scripts/work

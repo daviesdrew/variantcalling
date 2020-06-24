@@ -4,10 +4,16 @@ LABEL authors="Drew Davies" \
 
 # Install the conda environment
 COPY environment.yml /
-RUN conda env create -f /environment.yml && conda clean -a
+RUN conda update conda && \
+    conda env create -f /environment.yml && \
+    conda clean -a
 
 # Add conda installation dir to PATH (instead of doing 'conda activate')
-ENV PATH /opt/conda/envs/nf-core-illuminavariantcalling-1.0dev/bin:$PATH
+ENV PATH /opt/conda/envs/variantcalling/bin:$PATH
+
 
 # Dump the details of the installed packages to a file for posterity
-RUN conda env export --name nf-core-illuminavariantcalling-1.0dev > nf-core-illuminavariantcalling-1.0dev.yml
+#RUN conda env export --name variantcalling > variantcalling.yml
+
+# Dump the details of the installed packages to a file for posterity
+#RUN conda env export --name nf-core-illuminavariantcalling-1.0dev > nf-core-illuminavariantcalling-1.0dev.yml
