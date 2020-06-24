@@ -13,7 +13,7 @@ ENV PATH /opt/conda/envs/variantcalling/bin:$PATH
 
 
 # Dump the details of the installed packages to a file for posterity
-RUN conda env export --name variantcalling > variantcalling.yml
+#RUN conda env export --name variantcalling > variantcalling.yml
 
 # Dump the details of the installed packages to a file for posterity
 #RUN conda env export --name nf-core-illuminavariantcalling-1.0dev > nf-core-illuminavariantcalling-1.0dev.yml
