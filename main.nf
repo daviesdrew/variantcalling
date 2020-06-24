@@ -417,8 +417,6 @@ process FREEBAYES {
     tag "$sample_id"
     publishDir "${params.outdir}/variant/${params.variant}",
                 pattern: "${sample_id}*.vcf", mode: 'copy'
-    //publishDir "${params.outdir}/variant/${params.variant}", 
-    //            pattern: "${sample_id}*.txt", mode: 'copy'
     publishDir "${params.outdir}/logs/${params.variant}",
                 pattern: "${sample_id}.log", mode: "copy"
 
@@ -434,7 +432,6 @@ process FREEBAYES {
     script: 
         variant = "${sample_id}.vcf"
         freebayes_log = "${sample_id}.log"
-        //contamination = "${sample_id}_contamination.txt"
 
     """
     freebayes --gvcf --use-mapping-quality \\
@@ -442,7 +439,6 @@ process FREEBAYES {
     -f $ref -g 1000 $bam > $variant; 
     cat .command.log | tee $freebayes_log;
     """
-    //--contamination-estimates $contamination \\ 
 }
 //----------------------------------------
 
