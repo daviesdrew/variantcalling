@@ -388,11 +388,16 @@ process PEEP {
     tag "$sample_id"
     
     input:
-        tuple val(sample_id), path(bam), val(align_dir)
+        tuple val(method), val(sample_id), val(bam), val(align_dir)
+    
+    output:
+        tuple val(method), val(sample_id), path(bam), val(align_dir),
+                emit: 'peep'
     
     echo true 
 
     """
+        echo $method
         echo $sample_id
         echo $bam
         echo $align_dir
@@ -656,93 +661,64 @@ process VCF_CONSENSUS {
 // WORKFLOW DEFINITION 
 //=============================================================================
 
-def second_half(it) {
+workflow bwa_variant {
 
-    BAMINDEX(it)
+    take: 
+        reads
+        ref
+        align
+
+    main:
+        branch_variants(reads, ref, align)
 
 }
 
-workflow {
-    //----------------------------------------
-    // Read input, trimming and quality control
-    //----------------------------------------
-    // Create channel for paired end reads
-    println("workflow") 
-    //obtain read files from specified location 
-    ch_reads = Channel.fromFilePairs(
-        params.reads,
-        flat: true,
-        checkIfExists: true)
-    //check if Channel is empty
-    .ifEmpty{ exit 1, "No reads specified! Please specify where your reads are, e.g. '--reads \"/path/to/reads/*R{1,2}.fastq.qz\"' (quotes around reads ath required if using `*` and other characters expanded by the shell!)"}
-    //Convert specified files into tuples
-    .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
-      
-    ch_phix = Channel.value(file("${baseDir}/data/phix.fa"))
-    
-    REMOVE_PHIX(ch_phix, ch_reads)
-    FASTP(REMOVE_PHIX.out.reads)
-    fastqc_reports = FASTQC(FASTP.out.reads)
-    
-    
-    //----------------------------------------
-    // Read Mapping
-    //----------------------------------------
-    
-    ch_ref = Channel.value(file("${params.ref}"))
+workflow bowtie2_variant {
 
-    ch_align_map = Channel.from(['bwa', 'bowtie2', 'minimap2'])
-    ch_align_out = null;
-    
-    if (params.align == 'bowtie2') {
+    take: 
+        reads
+        ref
+        align
+
+    main:
+        branch_variants(reads, ref, align)
+
+}
+
+workflow minimap2_variant {
+
+    take: 
+        reads
+        ref
+        align
+
+    main:
+        branch_variants(reads, ref, align)
+
+}
+
+workflow branch_variants {
+
+    take: 
+        reads
+        ref
+        align
+
+    main: 
+        BAMINDEX(align)
         
-        BOWTIE2(ch_ref, FASTP.out.reads)
-        Channel.from(BOWTIE2.out.align.view())
-               .join(ch_align_map)
-               .subscribe{ println it }
-        BAMINDEX(BOWTIE2.out.align)
     
-    } else if (params.align == 'minimap2') {
-        
-        MINIMAP2(ch_ref, FASTP.out.reads)
-        Channel.from(MINIMAP2.out.align.view())
-               .join(ch_align_map)
-               .subscribe{ println it }
-        BAMINDEX(MINIMAP2.out.align)
-    
-    } else if (params.align == 'all') {
-        
-        BWA(ch_ref, FASTP.out.reads)
-        BOWTIE2(ch_ref, FASTP.out.reads)
-        MINIMAP2(ch_ref, FASTP.out.reads)
-        
-        ch_align_out = Channel.from(MINIMAP2.out.align.view(), 
-                                    BOWTIE2.out.align.view(),
-                                    BWA.out.align.view())
-                             .subscribe{ println it }
-        BAMINDEX(BOWTIE2.out.align)
-
-    } else {
-
-        BWA(ch_ref, FASTP.out.reads)
-        Channel.from(BWA.out.align.view())
-               .join(ch_align_map)
-               .subscribe{ println it }
-        BAMINDEX(BWA.out.align)
-    }
-
-
     //----------------------------------------
     // VARIANT CALLING 
     //----------------------------------------
     
     if (params.variant == 'other_variant_calling _tool') {
 
-        FREEBAYES(ch_ref, BAMINDEX.out.align)
+        FREEBAYES(ref, BAMINDEX.out.align)
     
     } else {
     
-        FREEBAYES(ch_ref, BAMINDEX.out.align)
+        FREEBAYES(ref, BAMINDEX.out.align)
     
     }
     
@@ -771,14 +747,10 @@ workflow {
 
     if (params.prediction == 'snpeff') {
         //deprecated until further notice        
-        SNPEFF(BCFTOOLS_FILTER.out.variant, 
-               FASTP.out.reads)
-    
+        SNPEFF(BCFTOOLS_FILTER.out.variant, reads)
     } else {
 
-        SNIPPY(BCFTOOLS_FILTER.out.variant, 
-               FASTP.out.reads)
-
+        SNIPPY(BCFTOOLS_FILTER.out.variant, reads)
     }
     
     //----------------------------------------
@@ -787,16 +759,76 @@ workflow {
     
     if (params.consensus == 'bcftools') {
 
-        BCFTOOLS_CONSENSUS(ch_ref, SNIPPY.out.annotation)
+        BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
     
     } else {
 
-        VCF_CONSENSUS(ch_ref, SNIPPY.out.annotation)
+        VCF_CONSENSUS(ref, SNIPPY.out.annotation)
     
     }
+
 }
 
+workflow read_map {
+    
+    main:
+        reads = Channel.fromFilePairs(
+                        params.reads,
+        flat: true,
+        checkIfExists: true)
+    //check if Channel is empty
+    .ifEmpty{ exit 1, """No reads specified! 
+                         Please specify where your reads are, 
+                            e.g. '--reads \"/path/to/reads/*R{1,2}.fastq.qz\"' 
+                            
+                         (quotes around reads ath required if using `*` and 
+                            other characters expanded by the shell!)"""}
+    //Convert specified files into tuples
+    .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
 
+    ref = Channel.value(file("${params.ref}"))
+    phix = Channel.value(file("${baseDir}/data/phix.fa"))
+        REMOVE_PHIX(phix, reads)
+        FASTP(REMOVE_PHIX.out.reads)
+        fastqc_reports = FASTQC(FASTP.out.reads)
+    
+        if (params.align == 'bowtie2') {
+        
+            BOWTIE2(ref, FASTP.out.reads)
+    
+        } else if (params.align == 'minimap2') {
+            
+            MINIMAP2(ref, FASTP.out.reads)
+    
+        } else if (params.align == 'all') {
+            
+            BWA(ref, FASTP.out.reads)
+            BOWTIE2(ref, FASTP.out.reads)
+            MINIMAP2(ref, FASTP.out.reads)
 
+        } else {
 
+            BWA(ref, FASTP.out.reads)
+        }
+    
+    emit: 
+        reads = FASTP.out.reads
+        ref = ref
+        minimap2 = MINIMAP2.out.align
+        bowtie2 = BOWTIE2.out.align
+        bwa = BWA.out.align
+}
 
+workflow {
+    read_map() 
+    
+    bowtie2_variant(read_map.out.reads,
+                    read_map.out.ref, 
+                    read_map.out.bowtie2)
+    minimap2_variant(read_map.out.reads,
+                     read_map.out.ref,
+                     read_map.out.minimap2)
+    bwa_variant(read_map.out.reads,
+                read_map.out.ref,
+                read_map.out.bwa)
+}
