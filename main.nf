@@ -382,13 +382,13 @@ process MINIMAP2 {
 //----------------------------------------
 
 //----------------------------------------
-// PROCESSES: PEEP
+// PROCESSES: PEEP_VAR
 //----------------------------------------
-process PEEP {
+process PEEP_VAR {
     tag "$sample_id"
     
     input:
-        tuple val(method), val(sample_id), val(bam), val(align_dir)
+        tuple val(method), val(sample_id), path(bam), val(align_dir)
     
     output:
         tuple val(method), val(sample_id), path(bam), val(align_dir),
@@ -401,6 +401,30 @@ process PEEP {
         echo $sample_id
         echo $bam
         echo $align_dir
+
+    """
+}
+//----------------------------------------
+
+//----------------------------------------
+// PROCESSES: PEEP_CON
+//----------------------------------------
+process PEEP_CON {
+    tag "$sample_id"
+    
+    input:
+        tuple path(filtered), path(ref), path(depths)
+    
+    output:
+        tuple path(filtered), path(ref), path(depths),
+                emit: 'peep'
+    
+    echo true 
+
+    """
+        echo $filtered
+        echo $ref
+        echo $depths
 
     """
 }
@@ -508,6 +532,8 @@ process BCFTOOLS_FILTER {
     publishDir "${params.outdir}/logs/${params.filter}",
                 pattern: "${sample_id}.log", mode: "copy"
 
+    echo true 
+
     input: 
         tuple val(sample_id), path(variant), 
               path(ref), path(depths)
@@ -582,10 +608,12 @@ process SNIPPY {
         outdir = "${params.outdir}/variant/snippy"
         snippy_log = "${sample_id}.log"
     """
+    
     snippy --cpus ${task.cpus} \
     --ref $ref --R1 $r1 --R2 $r2 \
     --outdir $outdir;
     cat .command.log | tee $snippy_log;
+    
     """
 }
 //----------------------------------------
@@ -660,134 +688,158 @@ process VCF_CONSENSUS {
 //=============================================================================
 // WORKFLOW DEFINITION 
 //=============================================================================
+workflow bowtie2_con {
 
-workflow bwa_variant {
+    take:
+        variants
+        reads
+        ref
+
+    main:
+        consensus(variants, reads, ref)
+}
+
+workflow minimap2_con {
+
+    take:
+        variants
+        reads
+        ref
+
+    main:
+        consensus(variants, reads, ref)
+}
+
+workflow bwa_con {
+
+    take:
+        variants
+        reads
+        ref
+
+    main:
+        consensus(variants, reads, ref)
+}
+
+
+workflow consensus {
+
+    take:
+        variants
+        reads
+        ref
+
+    main: 
+       
+       PEEP_CON(variants)
+             
+        if (params.prediction == 'snpeff') {
+            //deprecated until further notice        
+            SNPEFF(PEEP_CON.out.peep, reads)
+        } else {
+
+            SNIPPY(PEEP_CON.out.peep, reads)
+        }
+    
+        if (params.consensus == 'bcftools') {
+
+            BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
+    
+        } else {
+
+            VCF_CONSENSUS(ref, SNIPPY.out.annotation)
+    
+        }
+}
+
+workflow bwa_var {
 
     take: 
-        reads
         ref
         align
 
     main:
-        branch_variants(reads, ref, align)
+        variants(ref, align)
+
+    emit:
+        variant = variants.out.variant
 
 }
 
-workflow bowtie2_variant {
+workflow bowtie2_var {
 
     take: 
-        reads
         ref
         align
 
     main:
-        branch_variants(reads, ref, align)
+        variants(ref, align)
 
+    emit: 
+        variant = variants.out.variant
 }
 
-workflow minimap2_variant {
+workflow minimap2_var {
 
     take: 
-        reads
         ref
         align
 
     main:
-        branch_variants(reads, ref, align)
+        variants(ref, align)
+
+    emit:
+        variant = variants.out.variant
 
 }
 
-workflow branch_variants {
+workflow variants {
 
     take: 
-        reads
         ref
         align
 
     main: 
-        BAMINDEX(align)
+        PEEP_VAR(align)
+        BAMINDEX(PEEP_VAR.out.peep)
+    
+        if (params.variant == 'other_variant_calling _tool') {
+
+            FREEBAYES(ref, BAMINDEX.out.align)
+    
+        } else {
+    
+            FREEBAYES(ref, BAMINDEX.out.align)
+    
+        }
+    
+        BCFTOOLS_STATS(FREEBAYES.out.variant)
+    
+        if (params.filter == 'other_filtering_tool') {
+
+            BCFTOOLS_FILTER(FREEBAYES.out.variant)
+    
+        } else {
         
-    
-    //----------------------------------------
-    // VARIANT CALLING 
-    //----------------------------------------
-    
-    if (params.variant == 'other_variant_calling _tool') {
-
-        FREEBAYES(ref, BAMINDEX.out.align)
-    
-    } else {
-    
-        FREEBAYES(ref, BAMINDEX.out.align)
-    
-    }
-    
-    //----------------------------------------
-    // STATS
-    //----------------------------------------
-
-    BCFTOOLS_STATS(FREEBAYES.out.variant)
-    
-    //----------------------------------------
-    // FILTERING 
-    //----------------------------------------
-
-    if (params.filter == 'other_filtering_tool') {
-
-        BCFTOOLS_FILTER(FREEBAYES.out.variant)
-    
-    } else {
-        
-        BCFTOOLS_FILTER(FREEBAYES.out.variant)
-    }
-     
-    //----------------------------------------
-    // Annotate Genomic Variants    
-    //----------------------------------------
-
-    if (params.prediction == 'snpeff') {
-        //deprecated until further notice        
-        SNPEFF(BCFTOOLS_FILTER.out.variant, reads)
-    } else {
-
-        SNIPPY(BCFTOOLS_FILTER.out.variant, reads)
-    }
-    
-    //----------------------------------------
-    // Consensus building 
-    //----------------------------------------
-    
-    if (params.consensus == 'bcftools') {
-
-        BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
-    
-    } else {
-
-        VCF_CONSENSUS(ref, SNIPPY.out.annotation)
-    
-    }
+            BCFTOOLS_FILTER(FREEBAYES.out.variant)
+            BCFTOOLS_FILTER.out.variant.view()
+        }
+            
+            BCFTOOLS_FILTER.out.variant.view()
+    emit:
+        variant = BCFTOOLS_FILTER.out.variant
 
 }
 
 workflow read_map {
+
+    take:
+        reads
+        ref
+        phix
     
     main:
-        reads = Channel.fromFilePairs(
-                        params.reads,
-        flat: true,
-        checkIfExists: true)
-    //check if Channel is empty
-    .ifEmpty{ exit 1, """No reads specified! 
-                         Please specify where your reads are, 
-                            e.g. '--reads \"/path/to/reads/*R{1,2}.fastq.qz\"' 
-                            
-                         (quotes around reads ath required if using `*` and 
-                            other characters expanded by the shell!)"""}
-    //Convert specified files into tuples
-    .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
-
-    ref = Channel.value(file("${params.ref}"))
-    phix = Channel.value(file("${baseDir}/data/phix.fa"))
+        
         REMOVE_PHIX(phix, reads)
         FASTP(REMOVE_PHIX.out.reads)
         fastqc_reports = FASTQC(FASTP.out.reads)
@@ -809,7 +861,7 @@ workflow read_map {
         } else {
 
             BWA(ref, FASTP.out.reads)
-        }
+       }
     
     emit: 
         reads = FASTP.out.reads
@@ -820,15 +872,50 @@ workflow read_map {
 }
 
 workflow {
-    read_map() 
+    main:    
+        ref = Channel.value(file("${params.ref}"))
+        phix = Channel.value(file("${baseDir}/data/phix.fa"))
+        reads = Channel.fromFilePairs(params.reads,
+                                      flat: true,
+                                      checkIfExists: true)
+                       //check if Channel is empty
+                       .ifEmpty{ exit 1, 
+                                 """No reads specified! 
+                                    Please specify where your reads are, 
+                                    
+                                    e.g. '--reads \"/path/to/reads/*R{1,2}.fastq.qz\"' 
+                            
+                                    (quotes around reads ath required if using `*` and 
+                                     other characters expanded by the shell!)"""}
+                       //Convert specified files into tuples
+                       .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
+
+        read_map(reads,
+                 ref,
+                 phix) 
     
-    bowtie2_variant(read_map.out.reads,
-                    read_map.out.ref, 
+        bowtie2_var(read_map.out.ref, 
                     read_map.out.bowtie2)
-    minimap2_variant(read_map.out.reads,
-                     read_map.out.ref,
+        println("${bowtie2_var.out.variant}")
+
+        /*bowtie2_con(bowtie2_var.out.variant,
+                    read_map.out.reads,
+                    read_map.out.ref)*/
+    
+        minimap2_var(read_map.out.ref,
                      read_map.out.minimap2)
-    bwa_variant(read_map.out.reads,
-                read_map.out.ref,
+        
+        println("${minimap2_var.out.variant}")
+        /*minimap2_con(minimap2_var.out.variant,
+                     read_map.out.reads,
+                     read_map.out.ref)*/
+    
+        bwa_var(read_map.out.ref,
                 read_map.out.bwa)
+        
+        println("${bwa_var.out.variant}")
+        bwa_con(bwa_var.out.variant,
+                read_map.out.reads,
+                read_map.out.ref)
+
 }
