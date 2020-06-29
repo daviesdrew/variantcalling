@@ -91,6 +91,8 @@ if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ) {
     custom_runName = workflow.runName
 }
 
+
+
 def summary = [:]
 summary['Pipeline Name']        = workflow.manifest.name
 summary['Pipeline Version']     = workflow.manifest.version
@@ -270,9 +272,9 @@ process FASTQC {
 //----------------------------------------
 process BWA {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
+    publishDir "${params.outdir}/align/bwa",
                 pattern: "*.bam", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.align}",
+    publishDir "${params.outdir}/logs/bwa",
                 pattern: "${sample_id}.log", mode: 'copy'
     
     input:
@@ -281,7 +283,7 @@ process BWA {
     
     output:
         file "${sample_id}.log"
-        tuple val(sample_id), path(bam), 
+        tuple val('bwa'), val(sample_id), path(bam), 
               val(align_dir), emit: 'align'
     
     script:
@@ -307,9 +309,9 @@ process BWA {
 process BOWTIE2 {
     tag "$sample_id"
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
-    publishDir "${params.outdir}/align/${params.align}",
+    publishDir "${params.outdir}/align/bowtie2",
                 pattern: "*.bam", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.align}",
+    publishDir "${params.outdir}/logs/bowtie2",
                 pattern: "${sample_id}.log", mode: "copy"
 
     input:
@@ -317,16 +319,16 @@ process BOWTIE2 {
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        file "${sample_id}_${params.align}_align_pe.bam"
+        file "${sample_id}_bowtie2_align_pe.bam"
         file "${sample_id}.log"
-        tuple val(sample_id), path(bam),
+        tuple val('bowtie2'), val(sample_id), path(bam),
               val(align_dir), emit: 'align'
 
     script:
         index_dir = "./index"
         indexes = "./index/index"
         bam = "${sample_id}_bowtie2_align_pe.bam"
-        align_dir = "${params.outdir}/align/${params.align}"
+        align_dir = "${params.outdir}/align/bowtie2"
         bowtie2_log = "${sample_id}.log"
          
     """
@@ -349,32 +351,52 @@ process BOWTIE2 {
 //----------------------------------------
 process MINIMAP2 {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
+    publishDir "${params.outdir}/align/minimap2",
                 pattern: "*.bam", mode: "copy"
-    publishDir "${params.outdir}/logs/${params.align}",
+    publishDir "${params.outdir}/logs/minimap2",
                 pattern: "${sample_id}.log", mode: "copy"
-    
+   
     input:
         file ref            
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        file "${sample_id}_${params.align}_align_pe.bam"
+        file "${sample_id}_minimap2_align_pe.bam"
         file "${sample_id}.log"
-        tuple val(sample_id), path(bam), 
+        tuple val('minimap2'), val(sample_id), path(bam), 
               val(align_dir), emit: 'align'
     
     script:
-        align_dir = "${params.outdir}/align/${params.align}"
-        bam = "${sample_id}_${params.align}_align_pe.bam"
+        align_dir = "${params.outdir}/align/minimap2"
+        bam = "${sample_id}_minimap2_align_pe.bam"
         minimap2_log = "${sample_id}.log"
-
+    
     """
     minimap2 -a -t ${task.cpus} \\
         -ax sr $ref $r1 $r2 \\
         | samtools sort -@${task.cpus} \\
         | samtools view -F4 -b -o $bam;
         cat .command.log | tee $minimap2_log;
+    """
+}
+//----------------------------------------
+
+//----------------------------------------
+// PROCESSES: PEEP
+//----------------------------------------
+process PEEP {
+    tag "$sample_id"
+    
+    input:
+        tuple val(sample_id), path(bam), val(align_dir)
+    
+    echo true 
+
+    """
+        echo $sample_id
+        echo $bam
+        echo $align_dir
+
     """
 }
 //----------------------------------------
@@ -388,8 +410,11 @@ process BAMINDEX {
     publishDir "${align_dir}",
                 pattern: "*.bai", mode: "copy"
 
+    echo true 
+
     input: 
-        tuple val(sample_id), path(align), val(align_dir)
+        tuple val(method), val(sample_id), 
+              path(align), val(align_dir)
 
     output:
         file "${sample_id}_${params.align}_align_pe.bai"
@@ -631,6 +656,12 @@ process VCF_CONSENSUS {
 // WORKFLOW DEFINITION 
 //=============================================================================
 
+def second_half(it) {
+
+    BAMINDEX(it)
+
+}
+
 workflow {
     //----------------------------------------
     // Read input, trimming and quality control
@@ -660,22 +691,47 @@ workflow {
     
     ch_ref = Channel.value(file("${params.ref}"))
 
+    ch_align_map = Channel.from(['bwa', 'bowtie2', 'minimap2'])
+    ch_align_out = null;
+    
     if (params.align == 'bowtie2') {
         
         BOWTIE2(ch_ref, FASTP.out.reads)
+        Channel.from(BOWTIE2.out.align.view())
+               .join(ch_align_map)
+               .subscribe{ println it }
         BAMINDEX(BOWTIE2.out.align)
     
     } else if (params.align == 'minimap2') {
         
         MINIMAP2(ch_ref, FASTP.out.reads)
+        Channel.from(MINIMAP2.out.align.view())
+               .join(ch_align_map)
+               .subscribe{ println it }
         BAMINDEX(MINIMAP2.out.align)
     
-    } else {
+    } else if (params.align == 'all') {
         
         BWA(ch_ref, FASTP.out.reads)
+        BOWTIE2(ch_ref, FASTP.out.reads)
+        MINIMAP2(ch_ref, FASTP.out.reads)
+        
+        ch_align_out = Channel.from(MINIMAP2.out.align.view(), 
+                                    BOWTIE2.out.align.view(),
+                                    BWA.out.align.view())
+                             .subscribe{ println it }
+        BAMINDEX(BOWTIE2.out.align)
+
+    } else {
+
+        BWA(ch_ref, FASTP.out.reads)
+        Channel.from(BWA.out.align.view())
+               .join(ch_align_map)
+               .subscribe{ println it }
         BAMINDEX(BWA.out.align)
     }
-    
+
+
     //----------------------------------------
     // VARIANT CALLING 
     //----------------------------------------
@@ -739,3 +795,8 @@ workflow {
     
     }
 }
+
+
+
+
+
