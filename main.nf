@@ -881,4 +881,5 @@ workflow {
         
         if(params.align == 'bwa' || params.align == 'all')
             bwa(ref, reads, phix)
+
 }
