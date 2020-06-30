@@ -398,8 +398,8 @@ process BAMINDEX {
 
     output:
         file "${sample_id}_${params.align}_align_pe.bai"
-        tuple val(sample_id),  path(align), path(depths), 
-              emit: 'align'
+        tuple val(method), val(sample_id),  path(align), 
+              path(depths), emit: 'align'
     
     script: 
         indexed_bam = "${sample_id}_${params.align}_align_pe.bai"
@@ -420,18 +420,19 @@ process BAMINDEX {
 //----------------------------------------
 process FREEBAYES {
     tag "$sample_id"
-    publishDir "${params.outdir}/variant/${params.variant}",
+    publishDir "${params.outdir}/variant/${params.variant}/$method",
                 pattern: "${sample_id}*.vcf", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.variant}",
+    publishDir "${params.outdir}/logs/${params.variant}/$method",
                 pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         file ref
-        tuple val(sample_id), path(bam), path(depths)
+        tuple val(method), val(sample_id), 
+              path(bam), path(depths)
 
     output:
         file "${sample_id}.log"
-        tuple val(sample_id), path(variant), path(ref), 
+        tuple val(method), val(sample_id), path(variant), path(ref), 
               path(depths), emit: 'variant'
     
     script: 
@@ -453,11 +454,11 @@ process FREEBAYES {
 //----------------------------------------
 process BCFTOOLS_STATS {
     tag "$sample_id"
-    publishDir "${params.outdir}/variant",
+    publishDir "${params.outdir}/variant/stats/$method",
                 pattern: "*_stats.txt", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant), 
+        tuple val(method), val(sample_id), path(variant), 
               path(ref), path(depths)
 
     output:
@@ -486,13 +487,13 @@ process BCFTOOLS_FILTER {
     echo true 
 
     input: 
-        tuple val(sample_id), path(variant), 
+        tuple val(method), val(sample_id), path(variant), 
               path(ref), path(depths)
 
     output:
         file "${sample_id}_filtered.vcf"
         file "${sample_id}.log"
-        tuple path(filtered), path(ref), path(depths), 
+        tuple val(method), path(filtered), path(ref), path(depths), 
               emit: 'variant'
             
     script: 
@@ -518,7 +519,7 @@ process SNPEFF {
                 pattern: "*_annotation.vcf", mode: 'copy'
 
     input: 
-        tuple path(variant), path(ref), path(depths)
+        tuple val(method), path(variant), path(ref), path(depths)
         tuple val(sample_id), path(r1), path(r2)
     output:
         file "${sample_id}_annotation.vcf"
@@ -541,22 +542,22 @@ process SNPEFF {
 //----------------------------------------
 process SNIPPY {
     tag "$sample_id"
-    publishDir "${params.outdir}/variant/snippy",
+    publishDir "${params.outdir}/variant/snippy/$method",
                 pattern: "*snps.*", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.prediction}",
+    publishDir "${params.outdir}/logs/${params.prediction}/$method",
                 pattern: "${sample_id}.log", mode: "copy"
     
     input: 
-        tuple path(variant), path(ref), path(depths)
+        tuple val(method), path(variant), path(ref), path(depths)
         tuple val(sample_id), path(r1), path(r2)
 
     output:
         file "${sample_id}.log"
-        tuple val(sample_id), path(variant), path(depths),
+        tuple val(method), val(sample_id), path(variant), path(depths),
                 emit: 'annotation' 
     
     script:
-        outdir = "${params.outdir}/variant/snippy"
+        outdir = "${params.outdir}/variant/snippy/$method"
         snippy_log = "${sample_id}.log"
     """
     
@@ -575,14 +576,14 @@ process SNIPPY {
 //----------------------------------------
 process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
-    publishDir "${params.outdir}/consensus/${params.consensus}",
+    publishDir "${params.outdir}/consensus/${params.consensus}/$method",
                 pattern: "*.fa", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.consensus}",
+    publishDir "${params.outdir}/logs/${params.consensus}/$method",
                 pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         file ref 
-        tuple val(sample_id), path(variant), path(depths)
+        tuple val(method), val(sample_id), path(variant), path(depths)
 
     output:
         file "${sample_id}.log"
@@ -608,13 +609,13 @@ process BCFTOOLS_CONSENSUS {
 //----------------------------------------
 process VCF_CONSENSUS {
     tag "$sample_id"
-    publishDir "${params.outdir}/consensus/vcf",
+    publishDir "${params.outdir}/consensus/vcf/$method",
                 pattern: "*.fa", mode: 'copy'
-    publishDir "${params.outdir}/logs/vcf", 
+    publishDir "${params.outdir}/logs/vcf/$method", 
                 pattern: "${sample_id}.log", mode: "copy" 
     input:
         file ref
-        tuple val(sample_id), path(variant), path(depths)
+        tuple val(method), val(sample_id), path(variant), path(depths)
 
     output:
         file "${sample_id}.log"
@@ -819,7 +820,7 @@ workflow minimap2 {
         variants(ref, MINIMAP2.out.align)
         consensus(variants.out.variant,reads, ref)
 }
-/----------------------------------------
+//----------------------------------------
 
 //----------------------------------------
 // WORKFLOW: quality_check
