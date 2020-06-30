@@ -11,3 +11,4 @@ testing/
 *.simg
 results/*
 scripts/*
+pers/*
