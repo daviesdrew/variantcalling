@@ -382,55 +382,6 @@ process MINIMAP2 {
 //----------------------------------------
 
 //----------------------------------------
-// PROCESSES: PEEP_VAR
-//----------------------------------------
-process PEEP_VAR {
-    tag "$sample_id"
-    
-    input:
-        tuple val(method), val(sample_id), path(bam), val(align_dir)
-    
-    output:
-        tuple val(method), val(sample_id), path(bam), val(align_dir),
-                emit: 'peep'
-    
-    echo true 
-
-    """
-        echo $method
-        echo $sample_id
-        echo $bam
-        echo $align_dir
-
-    """
-}
-//----------------------------------------
-
-//----------------------------------------
-// PROCESSES: PEEP_CON
-//----------------------------------------
-process PEEP_CON {
-    tag "$sample_id"
-    
-    input:
-        tuple path(filtered), path(ref), path(depths)
-    
-    output:
-        tuple path(filtered), path(ref), path(depths),
-                emit: 'peep'
-    
-    echo true 
-
-    """
-        echo $filtered
-        echo $ref
-        echo $depths
-
-    """
-}
-//----------------------------------------
-
-//----------------------------------------
 // PROCESSES: BAMINDEX
 // Index sorted Bam file  
 //----------------------------------------
@@ -688,110 +639,6 @@ process VCF_CONSENSUS {
 //=============================================================================
 // WORKFLOW DEFINITION 
 //=============================================================================
-workflow bowtie2_con {
-
-    take:
-        variants
-        reads
-        ref
-
-    main:
-        consensus(variants, reads, ref)
-}
-
-workflow minimap2_con {
-
-    take:
-        variants
-        reads
-        ref
-
-    main:
-        consensus(variants, reads, ref)
-}
-
-workflow bwa_con {
-
-    take:
-        variants
-        reads
-        ref
-
-    main:
-        consensus(variants, reads, ref)
-}
-
-
-workflow consensus {
-
-    take:
-        variants
-        reads
-        ref
-
-    main: 
-       
-       PEEP_CON(variants)
-             
-        if (params.prediction == 'snpeff') {
-            //deprecated until further notice        
-            SNPEFF(PEEP_CON.out.peep, reads)
-        } else {
-
-            SNIPPY(PEEP_CON.out.peep, reads)
-        }
-    
-        if (params.consensus == 'bcftools') {
-
-            BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
-    
-        } else {
-
-            VCF_CONSENSUS(ref, SNIPPY.out.annotation)
-    
-        }
-}
-
-workflow bwa_var {
-
-    take: 
-        ref
-        align
-
-    main:
-        variants(ref, align)
-
-    emit:
-        variant = variants.out.variant
-
-}
-
-workflow bowtie2_var {
-
-    take: 
-        ref
-        align
-
-    main:
-        variants(ref, align)
-
-    emit: 
-        variant = variants.out.variant
-}
-
-workflow minimap2_var {
-
-    take: 
-        ref
-        align
-
-    main:
-        variants(ref, align)
-
-    emit:
-        variant = variants.out.variant
-
-}
 
 workflow variants {
 
@@ -800,8 +647,7 @@ workflow variants {
         align
 
     main: 
-        PEEP_VAR(align)
-        BAMINDEX(PEEP_VAR.out.peep)
+        BAMINDEX(align) 
     
         if (params.variant == 'other_variant_calling _tool') {
 
@@ -822,14 +668,81 @@ workflow variants {
         } else {
         
             BCFTOOLS_FILTER(FREEBAYES.out.variant)
-            BCFTOOLS_FILTER.out.variant.view()
         }
             
-            BCFTOOLS_FILTER.out.variant.view()
     emit:
         variant = BCFTOOLS_FILTER.out.variant
 
 }
+
+workflow consensus {
+
+    take:
+        variants
+        reads
+        ref
+
+    main: 
+       
+        if (params.prediction == 'snpeff') {
+            //deprecated until further notice        
+            SNPEFF(variants, reads)
+        } else {
+
+            SNIPPY(variants, reads)
+        }
+    
+        if (params.consensus == 'bcftools') {
+
+            BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
+    
+        } else {
+
+            VCF_CONSENSUS(ref, SNIPPY.out.annotation)
+    
+        }
+}
+
+workflow bwa {
+
+    take: 
+        ref
+        reads
+        align
+
+    main:
+        variants(ref, align)
+        consensus(variants.out.variant,
+                  reads, ref)
+}
+
+workflow bowtie2 {
+
+    take: 
+        ref
+        reads
+        align
+
+    main:
+        variants(ref, align)
+        consensus(variants.out.variant,
+                  reads, ref)
+}
+
+workflow minimap2 {
+
+    take: 
+        ref
+        reads
+        align
+
+    main:
+        variants(ref, align)
+        consensus(variants.out.variant,
+                  reads, ref)
+
+}
+
 
 workflow read_map {
 
@@ -890,32 +803,17 @@ workflow {
                        //Convert specified files into tuples
                        .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
 
-        read_map(reads,
-                 ref,
-                 phix) 
+        read_map(reads, ref, phix) 
     
-        bowtie2_var(read_map.out.ref, 
-                    read_map.out.bowtie2)
-        println("${bowtie2_var.out.variant}")
-
-        /*bowtie2_con(bowtie2_var.out.variant,
-                    read_map.out.reads,
-                    read_map.out.ref)*/
-    
-        minimap2_var(read_map.out.ref,
-                     read_map.out.minimap2)
-        
-        println("${minimap2_var.out.variant}")
-        /*minimap2_con(minimap2_var.out.variant,
-                     read_map.out.reads,
-                     read_map.out.ref)*/
-    
-        bwa_var(read_map.out.ref,
-                read_map.out.bwa)
-        
-        println("${bwa_var.out.variant}")
-        bwa_con(bwa_var.out.variant,
+        bowtie2(read_map.out.ref,
                 read_map.out.reads,
-                read_map.out.ref)
-
+                read_map.out.bowtie2)
+        
+        minimap2(read_map.out.ref,
+                 read_map.out.reads,
+                 read_map.out.minimap2)
+    
+        bwa(read_map.out.ref,
+            read_map.out.reads,
+            read_map.out.bwa)
 }
