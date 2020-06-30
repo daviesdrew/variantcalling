@@ -91,6 +91,8 @@ if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ) {
     custom_runName = workflow.runName
 }
 
+
+
 def summary = [:]
 summary['Pipeline Name']        = workflow.manifest.name
 summary['Pipeline Version']     = workflow.manifest.version
@@ -270,9 +272,9 @@ process FASTQC {
 //----------------------------------------
 process BWA {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
+    publishDir "${params.outdir}/align/bwa",
                 pattern: "*.bam", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.align}",
+    publishDir "${params.outdir}/logs/bwa",
                 pattern: "${sample_id}.log", mode: 'copy'
     
     input:
@@ -281,7 +283,7 @@ process BWA {
     
     output:
         file "${sample_id}.log"
-        tuple val(sample_id), path(bam), 
+        tuple val('bwa'), val(sample_id), path(bam), 
               val(align_dir), emit: 'align'
     
     script:
@@ -307,9 +309,9 @@ process BWA {
 process BOWTIE2 {
     tag "$sample_id"
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
-    publishDir "${params.outdir}/align/${params.align}",
+    publishDir "${params.outdir}/align/bowtie2",
                 pattern: "*.bam", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.align}",
+    publishDir "${params.outdir}/logs/bowtie2",
                 pattern: "${sample_id}.log", mode: "copy"
 
     input:
@@ -317,16 +319,16 @@ process BOWTIE2 {
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        file "${sample_id}_${params.align}_align_pe.bam"
+        file "${sample_id}_bowtie2_align_pe.bam"
         file "${sample_id}.log"
-        tuple val(sample_id), path(bam),
+        tuple val('bowtie2'), val(sample_id), path(bam),
               val(align_dir), emit: 'align'
 
     script:
         index_dir = "./index"
         indexes = "./index/index"
         bam = "${sample_id}_bowtie2_align_pe.bam"
-        align_dir = "${params.outdir}/align/${params.align}"
+        align_dir = "${params.outdir}/align/bowtie2"
         bowtie2_log = "${sample_id}.log"
          
     """
@@ -349,26 +351,26 @@ process BOWTIE2 {
 //----------------------------------------
 process MINIMAP2 {
     tag "$sample_id"
-    publishDir "${params.outdir}/align/${params.align}",
+    publishDir "${params.outdir}/align/minimap2",
                 pattern: "*.bam", mode: "copy"
-    publishDir "${params.outdir}/logs/${params.align}",
+    publishDir "${params.outdir}/logs/minimap2",
                 pattern: "${sample_id}.log", mode: "copy"
-    
+   
     input:
         file ref            
         tuple val(sample_id), path(r1), path(r2)
     
     output:
-        file "${sample_id}_${params.align}_align_pe.bam"
+        file "${sample_id}_minimap2_align_pe.bam"
         file "${sample_id}.log"
-        tuple val(sample_id), path(bam), 
+        tuple val('minimap2'), val(sample_id), path(bam), 
               val(align_dir), emit: 'align'
     
     script:
-        align_dir = "${params.outdir}/align/${params.align}"
-        bam = "${sample_id}_${params.align}_align_pe.bam"
+        align_dir = "${params.outdir}/align/minimap2"
+        bam = "${sample_id}_minimap2_align_pe.bam"
         minimap2_log = "${sample_id}.log"
-
+    
     """
     minimap2 -a -t ${task.cpus} \\
         -ax sr $ref $r1 $r2 \\
@@ -388,13 +390,16 @@ process BAMINDEX {
     publishDir "${align_dir}",
                 pattern: "*.bai", mode: "copy"
 
+    echo true 
+
     input: 
-        tuple val(sample_id), path(align), val(align_dir)
+        tuple val(method), val(sample_id), 
+              path(align), val(align_dir)
 
     output:
         file "${sample_id}_${params.align}_align_pe.bai"
-        tuple val(sample_id),  path(align), path(depths), 
-              emit: 'align'
+        tuple val(method), val(sample_id),  path(align), 
+              path(depths), emit: 'align'
     
     script: 
         indexed_bam = "${sample_id}_${params.align}_align_pe.bai"
@@ -415,18 +420,19 @@ process BAMINDEX {
 //----------------------------------------
 process FREEBAYES {
     tag "$sample_id"
-    publishDir "${params.outdir}/variant/${params.variant}",
+    publishDir "${params.outdir}/variant/${params.variant}/$method",
                 pattern: "${sample_id}*.vcf", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.variant}",
+    publishDir "${params.outdir}/logs/${params.variant}/$method",
                 pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         file ref
-        tuple val(sample_id), path(bam), path(depths)
+        tuple val(method), val(sample_id), 
+              path(bam), path(depths)
 
     output:
         file "${sample_id}.log"
-        tuple val(sample_id), path(variant), path(ref), 
+        tuple val(method), val(sample_id), path(variant), path(ref), 
               path(depths), emit: 'variant'
     
     script: 
@@ -448,11 +454,11 @@ process FREEBAYES {
 //----------------------------------------
 process BCFTOOLS_STATS {
     tag "$sample_id"
-    publishDir "${params.outdir}/variant",
+    publishDir "${params.outdir}/variant/stats/$method",
                 pattern: "*_stats.txt", mode: 'copy'
 
     input: 
-        tuple val(sample_id), path(variant), 
+        tuple val(method), val(sample_id), path(variant), 
               path(ref), path(depths)
 
     output:
@@ -478,14 +484,16 @@ process BCFTOOLS_FILTER {
     publishDir "${params.outdir}/logs/${params.filter}",
                 pattern: "${sample_id}.log", mode: "copy"
 
+    echo true 
+
     input: 
-        tuple val(sample_id), path(variant), 
+        tuple val(method), val(sample_id), path(variant), 
               path(ref), path(depths)
 
     output:
         file "${sample_id}_filtered.vcf"
         file "${sample_id}.log"
-        tuple path(filtered), path(ref), path(depths), 
+        tuple val(method), path(filtered), path(ref), path(depths), 
               emit: 'variant'
             
     script: 
@@ -511,7 +519,7 @@ process SNPEFF {
                 pattern: "*_annotation.vcf", mode: 'copy'
 
     input: 
-        tuple path(variant), path(ref), path(depths)
+        tuple val(method), path(variant), path(ref), path(depths)
         tuple val(sample_id), path(r1), path(r2)
     output:
         file "${sample_id}_annotation.vcf"
@@ -534,28 +542,30 @@ process SNPEFF {
 //----------------------------------------
 process SNIPPY {
     tag "$sample_id"
-    publishDir "${params.outdir}/variant/snippy",
+    publishDir "${params.outdir}/variant/snippy/$method",
                 pattern: "*snps.*", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.prediction}",
+    publishDir "${params.outdir}/logs/${params.prediction}/$method",
                 pattern: "${sample_id}.log", mode: "copy"
     
     input: 
-        tuple path(variant), path(ref), path(depths)
+        tuple val(method), path(variant), path(ref), path(depths)
         tuple val(sample_id), path(r1), path(r2)
 
     output:
         file "${sample_id}.log"
-        tuple val(sample_id), path(variant), path(depths),
+        tuple val(method), val(sample_id), path(variant), path(depths),
                 emit: 'annotation' 
     
     script:
-        outdir = "${params.outdir}/variant/snippy"
+        outdir = "${params.outdir}/variant/snippy/$method"
         snippy_log = "${sample_id}.log"
     """
+    
     snippy --cpus ${task.cpus} \
     --ref $ref --R1 $r1 --R2 $r2 \
     --outdir $outdir;
     cat .command.log | tee $snippy_log;
+    
     """
 }
 //----------------------------------------
@@ -566,14 +576,14 @@ process SNIPPY {
 //----------------------------------------
 process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
-    publishDir "${params.outdir}/consensus/${params.consensus}",
+    publishDir "${params.outdir}/consensus/${params.consensus}/$method",
                 pattern: "*.fa", mode: 'copy'
-    publishDir "${params.outdir}/logs/${params.consensus}",
+    publishDir "${params.outdir}/logs/${params.consensus}/$method",
                 pattern: "${sample_id}.log", mode: "copy"
 
     input: 
         file ref 
-        tuple val(sample_id), path(variant), path(depths)
+        tuple val(method), val(sample_id), path(variant), path(depths)
 
     output:
         file "${sample_id}.log"
@@ -599,13 +609,13 @@ process BCFTOOLS_CONSENSUS {
 //----------------------------------------
 process VCF_CONSENSUS {
     tag "$sample_id"
-    publishDir "${params.outdir}/consensus/vcf",
+    publishDir "${params.outdir}/consensus/vcf/$method",
                 pattern: "*.fa", mode: 'copy'
-    publishDir "${params.outdir}/logs/vcf", 
+    publishDir "${params.outdir}/logs/vcf/$method", 
                 pattern: "${sample_id}.log", mode: "copy" 
     input:
         file ref
-        tuple val(sample_id), path(variant), path(depths)
+        tuple val(method), val(sample_id), path(variant), path(depths)
 
     output:
         file "${sample_id}.log"
@@ -631,111 +641,245 @@ process VCF_CONSENSUS {
 // WORKFLOW DEFINITION 
 //=============================================================================
 
+//----------------------------------------
+// WORKFLOW: variants
+// Takes:
+//      ref = reference genome
+//      align = sorted bam file 
+//      
+// Main: 
+//      1. Indeexes bam file (align)
+//      2. Variant calling
+//      3. Variant stats
+//      4. Filter variants
+//
+// Emit:
+//      variant = Main.4.out.variant 
+//
+//----------------------------------------
+workflow variants {
+
+    take: 
+        ref
+        align
+
+    main: 
+        BAMINDEX(align) 
+    
+        if (params.variant == 'other_variant_calling _tool') {
+
+            FREEBAYES(ref, BAMINDEX.out.align)
+    
+        } else {
+    
+            FREEBAYES(ref, BAMINDEX.out.align)
+    
+        }
+    
+        BCFTOOLS_STATS(FREEBAYES.out.variant)
+    
+        if (params.filter == 'other_filtering_tool') {
+
+            BCFTOOLS_FILTER(FREEBAYES.out.variant)
+    
+        } else {
+        
+            BCFTOOLS_FILTER(FREEBAYES.out.variant)
+        }
+            
+    emit:
+        variant = BCFTOOLS_FILTER.out.variant
+
+}
+//----------------------------------------
+
+//----------------------------------------
+// WORKFLOW: consensus
+// Takes:
+//      variants = variant calls on reads
+//      reads = paired end reads
+//      ref = reference genome
+//      
+// Main: 
+//      1. Annotation && effect prediction
+//      2. Consensus
+//
+//----------------------------------------
+workflow consensus {
+
+    take:
+        variants
+        reads
+        ref
+
+    main: 
+       
+        if (params.prediction == 'snpeff') {
+            //deprecated until further notice        
+            SNPEFF(variants, reads)
+        } else {
+
+            SNIPPY(variants, reads)
+        }
+    
+        if (params.consensus == 'bcftools') {
+
+            BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
+    
+        } else {
+
+            VCF_CONSENSUS(ref, SNIPPY.out.annotation)
+    
+        }
+}
+//----------------------------------------
+
+//----------------------------------------
+// WORKFLOW: bwa
+// Takes:
+//      ref = reference genome
+//      reads = paired end reads
+//      phix = phix genome
+//      
+// Main: 
+//      1. Quality check and read filtering 
+//      2. Read mapping using BWA
+//      3. Variant calling
+//      4. Consensus 
+//
+//----------------------------------------
+workflow bwa {
+
+    take: 
+        ref
+        reads
+        phix
+
+    main:
+        quality_check(reads, phix)
+        BWA(ref, quality_check.out.reads)
+        variants(ref, BWA.out.align)
+        consensus(variants.out.variant,
+                  reads, ref)
+}
+//----------------------------------------
+
+//----------------------------------------
+// WORKFLOW: bowtie2
+// Takes:
+//      ref = reference genome
+//      reads = paired end reads
+//      phix = phix genome
+//      
+// Main: 
+//      1. Quality check and read filtering 
+//      2. Read mapping using BOWTIE2
+//      3. Variant calling
+//      4. Consensus 
+//
+//----------------------------------------
+workflow bowtie2 {
+
+    take: 
+        ref
+        reads
+        phix
+
+    main:
+        quality_check(reads, phix)
+        BOWTIE2(ref, quality_check.out.reads)
+        variants(ref, BOWTIE2.out.align)
+        consensus(variants.out.variant, reads, ref)
+}
+//----------------------------------------
+
+//----------------------------------------
+// WORKFLOW: minimap2
+// Takes:
+//      ref = reference genome
+//      reads = paired end reads
+//      phix = phix genome
+//      
+// Main: 
+//      1. Quality check and read filtering 
+//      2. Read mapping using MINIMAP2
+//      3. Variant calling
+//      4. Consensus 
+//
+//----------------------------------------
+workflow minimap2 {
+
+    take: 
+        ref
+        reads
+        phix 
+
+    main:
+        quality_check(reads, phix)
+        MINIMAP2(ref, quality_check.out.reads)
+        variants(ref, MINIMAP2.out.align)
+        consensus(variants.out.variant,reads, ref)
+}
+//----------------------------------------
+
+//----------------------------------------
+// WORKFLOW: quality_check
+// Takes:
+//      reads = paired end reads
+//      phix = phix genome
+//      
+// Main: 
+//      1. Filter using phix  
+//      2. Trim paired end reads  
+//      3. Check quality trimmed pe reads
+//
+// Emit: 
+//      reads = Trimmed paired end reads
+//
+//----------------------------------------
+workflow quality_check {
+
+    take:
+        reads
+        phix
+    
+    main:
+        
+        REMOVE_PHIX(phix, reads)
+        FASTP(REMOVE_PHIX.out.reads)
+        fastqc_reports = FASTQC(FASTP.out.reads)
+    
+    emit: 
+        reads = FASTP.out.reads
+}
+//----------------------------------------
+
 workflow {
-    //----------------------------------------
-    // Read input, trimming and quality control
-    //----------------------------------------
-    // Create channel for paired end reads
-    println("workflow") 
-    //obtain read files from specified location 
-    ch_reads = Channel.fromFilePairs(
-        params.reads,
-        flat: true,
-        checkIfExists: true)
-    //check if Channel is empty
-    .ifEmpty{ exit 1, "No reads specified! Please specify where your reads are, e.g. '--reads \"/path/to/reads/*R{1,2}.fastq.qz\"' (quotes around reads ath required if using `*` and other characters expanded by the shell!)"}
-    //Convert specified files into tuples
-    .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
-      
-    ch_phix = Channel.value(file("${baseDir}/data/phix.fa"))
-    
-    REMOVE_PHIX(ch_phix, ch_reads)
-    FASTP(REMOVE_PHIX.out.reads)
-    fastqc_reports = FASTQC(FASTP.out.reads)
-    
-    
-    //----------------------------------------
-    // Read Mapping
-    //----------------------------------------
-    
-    ch_ref = Channel.value(file("${params.ref}"))
+    main:    
+        ref = Channel.value(file("${params.ref}"))
+        phix = Channel.value(file("${baseDir}/data/phix.fa"))
+        reads = Channel.fromFilePairs(params.reads,
+                                      flat: true,
+                                      checkIfExists: true)
+                       //check if Channel is empty
+                       .ifEmpty{ exit 1, 
+                                 """No reads specified! 
+                                    Please specify where your reads are, 
+                                    
+                                    e.g. '--reads \"/path/to/reads/*R{1,2}.fastq.qz\"' 
+                            
+                                    (quotes around reads ath required if using `*` and 
+                                     other characters expanded by the shell!)"""}
+                       //Convert specified files into tuples
+                       .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
 
-    if (params.align == 'bowtie2') {
+        if(params.align == 'bowtie2' || params.align == 'all')
+            bowtie2(ref, reads, phix)
+
+        if(params.align == 'minimap2' || params.align == 'all')
+            minimap2(ref, reads, phix) 
         
-        BOWTIE2(ch_ref, FASTP.out.reads)
-        BAMINDEX(BOWTIE2.out.align)
-    
-    } else if (params.align == 'minimap2') {
-        
-        MINIMAP2(ch_ref, FASTP.out.reads)
-        BAMINDEX(MINIMAP2.out.align)
-    
-    } else {
-        
-        BWA(ch_ref, FASTP.out.reads)
-        BAMINDEX(BWA.out.align)
-    }
-    
-    //----------------------------------------
-    // VARIANT CALLING 
-    //----------------------------------------
-    
-    if (params.variant == 'other_variant_calling _tool') {
+        if(params.align == 'bwa' || params.align == 'all')
+            bwa(ref, reads, phix)
 
-        FREEBAYES(ch_ref, BAMINDEX.out.align)
-    
-    } else {
-    
-        FREEBAYES(ch_ref, BAMINDEX.out.align)
-    
-    }
-    
-    //----------------------------------------
-    // STATS
-    //----------------------------------------
-
-    BCFTOOLS_STATS(FREEBAYES.out.variant)
-    
-    //----------------------------------------
-    // FILTERING 
-    //----------------------------------------
-
-    if (params.filter == 'other_filtering_tool') {
-
-        BCFTOOLS_FILTER(FREEBAYES.out.variant)
-    
-    } else {
-        
-        BCFTOOLS_FILTER(FREEBAYES.out.variant)
-    }
-     
-    //----------------------------------------
-    // Annotate Genomic Variants    
-    //----------------------------------------
-
-    if (params.prediction == 'snpeff') {
-        //deprecated until further notice        
-        SNPEFF(BCFTOOLS_FILTER.out.variant, 
-               FASTP.out.reads)
-    
-    } else {
-
-        SNIPPY(BCFTOOLS_FILTER.out.variant, 
-               FASTP.out.reads)
-
-    }
-    
-    //----------------------------------------
-    // Consensus building 
-    //----------------------------------------
-    
-    if (params.consensus == 'bcftools') {
-
-        BCFTOOLS_CONSENSUS(ch_ref, SNIPPY.out.annotation)
-    
-    } else {
-
-        VCF_CONSENSUS(ch_ref, SNIPPY.out.annotation)
-    
-    }
 }
