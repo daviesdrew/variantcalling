@@ -22,4 +22,3 @@ dependencies:
     - numpy==1.18.5
     - pandas==1.0.5
     - vcf-consensus-builder==0.1.0
-prefix: /home/CSCScience.ca/ddavies/.local/anaconda3/envs/snip_test
