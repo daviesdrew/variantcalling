@@ -640,6 +640,22 @@ process VCF_CONSENSUS {
 // WORKFLOW DEFINITION 
 //=============================================================================
 
+//----------------------------------------
+// WORKFLOW: variants
+// Takes:
+//      ref = reference genome
+//      align = sorted bam file 
+//      
+// Main: 
+//      1. Indeexes bam file (align)
+//      2. Variant calling
+//      3. Variant stats
+//      4. Filter variants
+//
+// Emit:
+//      variant = Main.4.out.variant 
+//
+//----------------------------------------
 workflow variants {
 
     take: 
@@ -674,7 +690,20 @@ workflow variants {
         variant = BCFTOOLS_FILTER.out.variant
 
 }
+//----------------------------------------
 
+//----------------------------------------
+// WORKFLOW: consensus
+// Takes:
+//      variants = variant calls on reads
+//      reads = paired end reads
+//      ref = reference genome
+//      
+// Main: 
+//      1. Annotation && effect prediction
+//      2. Consensus
+//
+//----------------------------------------
 workflow consensus {
 
     take:
@@ -702,53 +731,115 @@ workflow consensus {
     
         }
 }
+//----------------------------------------
 
+//----------------------------------------
+// WORKFLOW: bwa
+// Takes:
+//      ref = reference genome
+//      reads = paired end reads
+//      phix = phix genome
+//      
+// Main: 
+//      1. Quality check and read filtering 
+//      2. Read mapping using BWA
+//      3. Variant calling
+//      4. Consensus 
+//
+//----------------------------------------
 workflow bwa {
 
     take: 
         ref
         reads
-        align
+        phix
 
     main:
-        variants(ref, align)
+        quality_check(reads, phix)
+        BWA(ref, quality_check.out.reads)
+        variants(ref, BWA.out.align)
         consensus(variants.out.variant,
                   reads, ref)
 }
+//----------------------------------------
 
+//----------------------------------------
+// WORKFLOW: bowtie2
+// Takes:
+//      ref = reference genome
+//      reads = paired end reads
+//      phix = phix genome
+//      
+// Main: 
+//      1. Quality check and read filtering 
+//      2. Read mapping using BOWTIE2
+//      3. Variant calling
+//      4. Consensus 
+//
+//----------------------------------------
 workflow bowtie2 {
 
     take: 
         ref
         reads
-        align
+        phix
 
     main:
-        variants(ref, align)
-        consensus(variants.out.variant,
-                  reads, ref)
+        quality_check(reads, phix)
+        BOWTIE2(ref, quality_check.out.reads)
+        variants(ref, BOWTIE2.out.align)
+        consensus(variants.out.variant, reads, ref)
 }
+//----------------------------------------
 
+//----------------------------------------
+// WORKFLOW: minimap2
+// Takes:
+//      ref = reference genome
+//      reads = paired end reads
+//      phix = phix genome
+//      
+// Main: 
+//      1. Quality check and read filtering 
+//      2. Read mapping using MINIMAP2
+//      3. Variant calling
+//      4. Consensus 
+//
+//----------------------------------------
 workflow minimap2 {
 
     take: 
         ref
         reads
-        align
+        phix 
 
     main:
-        variants(ref, align)
-        consensus(variants.out.variant,
-                  reads, ref)
-
+        quality_check(reads, phix)
+        MINIMAP2(ref, quality_check.out.reads)
+        variants(ref, MINIMAP2.out.align)
+        consensus(variants.out.variant,reads, ref)
 }
+/----------------------------------------
 
-
-workflow read_map {
+//----------------------------------------
+// WORKFLOW: quality_check
+// Takes:
+//      reads = paired end reads
+//      phix = phix genome
+//      
+// Main: 
+//      1. Filter using phix  
+//      2. Trim paired end reads  
+//      3. Check quality trimmed pe reads
+//
+// Emit: 
+//      reads = Trimmed paired end reads
+//
+//----------------------------------------
+workflow quality_check {
 
     take:
         reads
-        ref
         phix
     
     main:
@@ -757,32 +848,10 @@ workflow read_map {
         FASTP(REMOVE_PHIX.out.reads)
         fastqc_reports = FASTQC(FASTP.out.reads)
     
-        if (params.align == 'bowtie2') {
-        
-            BOWTIE2(ref, FASTP.out.reads)
-    
-        } else if (params.align == 'minimap2') {
-            
-            MINIMAP2(ref, FASTP.out.reads)
-    
-        } else if (params.align == 'all') {
-            
-            BWA(ref, FASTP.out.reads)
-            BOWTIE2(ref, FASTP.out.reads)
-            MINIMAP2(ref, FASTP.out.reads)
-
-        } else {
-
-            BWA(ref, FASTP.out.reads)
-       }
-    
     emit: 
         reads = FASTP.out.reads
-        ref = ref
-        minimap2 = MINIMAP2.out.align
-        bowtie2 = BOWTIE2.out.align
-        bwa = BWA.out.align
 }
+//----------------------------------------
 
 workflow {
     main:    
@@ -803,17 +872,12 @@ workflow {
                        //Convert specified files into tuples
                        .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
 
-        read_map(reads, ref, phix) 
-    
-        bowtie2(read_map.out.ref,
-                read_map.out.reads,
-                read_map.out.bowtie2)
+        if(params.align == 'bowtie2' || params.align == 'all')
+            bowtie2(ref, reads, phix)
+
+        if(params.align == 'minimap2' || params.align == 'all')
+            minimap2(ref, reads, phix) 
         
-        minimap2(read_map.out.ref,
-                 read_map.out.reads,
-                 read_map.out.minimap2)
-    
-        bwa(read_map.out.ref,
-            read_map.out.reads,
-            read_map.out.bwa)
+        if(params.align == 'bwa' || params.align == 'all')
+            bwa(ref, reads, phix)
 }
