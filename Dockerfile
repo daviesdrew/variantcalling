@@ -3,7 +3,7 @@ LABEL authors="Drew Davies" \
       description="Docker image containing all software requirements for the nf-core/illuminavariantcalling pipeline"
 
 # Install the conda environment
-COPY environment.yml /
+COPY environment.yml  /
 RUN conda update conda && \
     conda env create -f /environment.yml && \
     conda clean -a
