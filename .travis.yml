@@ -9,10 +9,10 @@ before_install:
     - echo "This is the first attempt at .travis.yml for variantcalling"
     - echo "This is an attempt to build the Dockerfile environment"
     - docker build . < ./Dockerfile
-
+    - docker run --name varcall
 script:
     - docker ps -a
-    - nextflow run ./main.nf
+    - nextflow run ./main.nf -with-docker varcall
 
 after_success:
     - echo "Your ci build of Dockerfile has succeeded"
