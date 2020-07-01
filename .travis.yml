@@ -12,7 +12,13 @@ before_install:
 script:
     - docker build . --file ./Dockerfile --tag varcall
     - docker run varcall
-    - nextflow run ./main.nf 
+    - nextflow run ./main.nf --align all \
+        --reads "./data/CIN*{1,2}*" \
+        --ref "./data/ref.fa" \
+        --fastp_min_base_quality 15 \
+        --fastp_max_percent_low_qual_base 40 \
+        --verbose;
+        
 
 after_success:
     - echo "Your ci build of Dockerfile has succeeded"
