@@ -12,6 +12,7 @@ before_install:
 
 script:
     - docker ps -a
+    - nextflow run ./main.nf
 
 after_success:
     - echo "Your ci build of Dockerfile has succeeded"
