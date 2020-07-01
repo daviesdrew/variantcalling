@@ -8,10 +8,10 @@ services: docker
 before_install:
     - echo "This is the first attempt at .travis.yml for variantcalling"
     - echo "This is an attempt to build the Dockerfile environment"
-    - docker build . --file ./Dockerfile --tag varcall
-    - docker run varcall
 
 script:
+    - docker build . --file ./Dockerfile --tag varcall
+    - docker run varcall
     - nextflow run ./main.nf -with-docker varcall
 
 after_success:
