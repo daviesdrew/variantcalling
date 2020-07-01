@@ -10,7 +10,6 @@ before_install:
     - echo "This is an attempt to build the Dockerfile environment"
     - docker build . --file ./Dockerfile --tag varcall
     - docker run varcall
-    - wget -q https://get.nextflow.io | bash
 
 script:
     - nextflow run ./main.nf -with-docker varcall
