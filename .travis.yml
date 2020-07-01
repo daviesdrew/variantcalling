@@ -12,7 +12,7 @@ before_install:
 script:
     - docker build . --file ./Dockerfile --tag varcall
     - docker run varcall
-    - nextflow run ./main.nf -with-docker varcall
+    - nextflow run ./main.nf 
 
 after_success:
     - echo "Your ci build of Dockerfile has succeeded"
