@@ -7,6 +7,7 @@ COPY environment.yml  /
 RUN conda update conda && \
     conda env create -f /environment.yml && \
     conda clean -a
+RUN wget -q0- https://get.nextflow.io | bash
 
 # Add conda installation dir to PATH (instead of doing 'conda activate')
 ENV PATH /opt/conda/envs/variantcalling/bin:$PATH

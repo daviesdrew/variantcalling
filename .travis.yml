@@ -9,9 +9,6 @@ before_install:
     - echo "This is the first attempt at .travis.yml for variantcalling"
     - echo "This is an attempt to build the Dockerfile environment"
     - docker build . < ./Dockerfile
-    - echo "Install nextflow"
-    - wget -q0- https://get.nextflow.io | bash
-    - echo "Nextflow is installed in current dir"
 
 script:
     - docker ps -a
