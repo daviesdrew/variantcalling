@@ -11,7 +11,7 @@ before_install:
 
 script:
     - docker build . --file ./Dockerfile --tag varcall
-    - docker run varcall
+    - docker run -d --publish 8000:8080 varcall
     - nextflow run ./main.nf --align all \
         --reads "./data/CIN*R{1,2}*" \
         --ref "./data/ref.fa" \
