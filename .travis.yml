@@ -17,7 +17,8 @@ script:
         --ref "./data/ref.fa" \
         --fastp_min_base_quality 15 \
         --fastp_max_percent_low_qual_base 40 \
-        --verbose;
+        --verbose \
+        -with-docker varcall;
         
 
 after_success:
