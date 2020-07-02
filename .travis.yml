@@ -8,10 +8,11 @@ services: docker
 before_install:
     - echo "This is the first attempt at .travis.yml for variantcalling"
     - echo "This is an attempt to build the Dockerfile environment"
-
-script:
     - docker build . --file ./Dockerfile --tag varcall
     - docker run -d --publish 8000:8080 varcall
+    - docker ps -a 
+
+script:
     - nextflow run ./main.nf --align all \
         --reads "./data/CIN*R{1,2}*" \
         --ref "./data/ref.fa" \
