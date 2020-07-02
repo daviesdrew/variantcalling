@@ -10,7 +10,7 @@ RUN conda update conda && \
 #RUN wget -q https://get.nextflow.io | bash
 
 # Add conda installation dir to PATH (instead of doing 'conda activate')
-ENV PATH /opt/conda/envs/variantcalling/bin:$PATH
+ENV PATH /opt/conda/envs/variantcalling-1.0.0/bin:$PATH
 
 
 # Dump the details of the installed packages to a file for posterity
