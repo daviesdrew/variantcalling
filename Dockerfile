@@ -4,7 +4,8 @@ LABEL authors="Drew Davies" \
 
 # Install the conda environment
 COPY environment.yml  /
-COPY "data/CIN*R{1,2}*" /data
+RUN mkdir /data
+COPY ./data/CIN*R{1,2}* /data
 RUN conda update conda && \
     conda env create -f /environment.yml && \
     conda clean -a
