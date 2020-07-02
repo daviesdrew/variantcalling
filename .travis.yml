@@ -8,9 +8,10 @@ services: docker
 before_install:
     - echo "This is the first attempt at .travis.yml for variantcalling"
     - echo "This is an attempt to build the Dockerfile environment"
-    - docker build . --file ./Dockerfile --tag varcall
-    - docker run -d --publish 8000:8080 varcall
+    - docker build . --file ./Dockerfile --tag variantcaller
+    #- docker run -d --publish 8000:8080 variantcaller
     - docker ps -a 
+    
 
 script:
     - nextflow run ./main.nf --align all \\
@@ -19,7 +20,7 @@ script:
         --fastp_min_base_quality 15 \\
         --fastp_max_percent_low_qual_base 40 \\
         --verbose \\
-        -with-docker varcall;
+        -with-docker variantcaller;
         
 
 after_success:
