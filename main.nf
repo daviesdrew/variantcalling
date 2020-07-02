@@ -857,7 +857,7 @@ workflow quality_check {
 workflow {
     main:    
         ref = Channel.value(file("${params.ref}"))
-        phix = Channel.value(file("${baseDir}/data/phix.fa"))
+        phix = Channel.value(file("${baseDir}/phix.fa"))
         reads = Channel.fromFilePairs(params.reads,
                                       flat: true,
                                       checkIfExists: true)
