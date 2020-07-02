@@ -4,6 +4,7 @@ LABEL authors="Drew Davies" \
 
 # Install the conda environment
 COPY environment.yml  /
+COPY ./data /
 RUN conda update conda && \
     conda env create -f /environment.yml && \
     conda clean -a
