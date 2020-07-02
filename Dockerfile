@@ -5,7 +5,7 @@ LABEL authors="Drew Davies" \
 # Install the conda environment
 COPY environment.yml  /
 RUN mkdir /data
-COPY ./data/CIN*R{1,2}* /data
+COPY ./data/CIN-2-QCM18-1264_S1_L001_R1.fastq.gz /data
 RUN conda update conda && \
     conda env create -f /environment.yml && \
     conda clean -a
