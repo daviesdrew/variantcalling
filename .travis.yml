@@ -13,7 +13,7 @@ before_install:
     - wget -qO- https://get.nextflow.io | bash 
 
 script:
-    - echo $TRAVIS_BUILD_ID
+    - echo $TRAVIS_BUILD_DIR
     - nextflow run ./main.nf --align all \\
         --reads "./data/CIN*R{1,2}*" \\
         --ref "./data/ref.fa" \\
