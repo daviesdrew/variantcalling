@@ -6,7 +6,7 @@ LABEL authors="Drew Davies" \
 COPY environment.yml  /
 RUN mkdir /data
 RUN cat environment.yml
-RUN cat data/CIN-2-QCM18-1264_S1_L001_R1.fastq.gz 
+RUN cat CIN-2-QCM18-1264_S1_L001_R1.fastq.gz 
 COPY ./data/CIN-2-QCM18-1264_S1_L001_R1.fastq.gz /data
 RUN conda update conda && \
     conda env create -f /environment.yml && \
