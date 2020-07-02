@@ -182,7 +182,7 @@ process REMOVE_PHIX {
     */ 
     
     """
-    bbduk \\
+    bbduk.sh \\
         -Xmx${task.memory.toMega()}m \\
         in1=$r1 in2=$r2 \\
         out1=$r1_out out2=$r2_out \\
