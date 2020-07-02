@@ -10,8 +10,7 @@ before_install:
     - echo "This is an attempt to build the Dockerfile environment"
     - docker build . --file ./Dockerfile --tag variantcaller
     #- docker run -d --publish 8000:8080 variantcaller
-    - docker ps -a 
-    
+    - wget -qO- https://get.nextflow.io | bash 
 
 script:
     - nextflow run ./main.nf --align all \\
