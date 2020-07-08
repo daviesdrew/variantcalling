@@ -8,14 +8,14 @@ services: docker
 before_install:
     - echo "This is the first attempt at .travis.yml for variantcalling"
     - echo "This is an attempt to build the Dockerfile environment"
-    - docker build --memory-swap -1 . --file ./Dockerfile --tag variantcalling
     - wget -qO- https://get.nextflow.io | bash 
+    - docker build --memory-swap -1 . --file ./Dockerfile --tag variantcalling
     - sudo mv nextflow /usr/local/bin
 
 script:
     - echo $TRAVIS_BUILD_DIR
     - ls $TRAVIS_BUILD_DIR
-    - nextflow run ./main.nf --align minimap2 --reads "./CIN*R{1,2}*" --ref "./ref.fa" --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --verbose -with-docker variantcalling;
+    - nextflow run ./main.nf --align bowtie2 --reads "./CIN*R{1,2}*" --ref "./ref.fa" --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --verbose -with-docker variantcalling;
     - echo $?
         
 
