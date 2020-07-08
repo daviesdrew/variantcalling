@@ -9,14 +9,13 @@ before_install:
     - echo "This is the first attempt at .travis.yml for variantcalling"
     - echo "This is an attempt to build the Dockerfile environment"
     - docker build . --file ./Dockerfile --tag variantcalling
-    #- docker run -d --publish 8000:8080 variantcaller
     - wget -qO- https://get.nextflow.io | bash 
     - sudo mv nextflow /usr/local/bin
 
 script:
     - echo $TRAVIS_BUILD_DIR
     - ls $TRAVIS_BUILD_DIR
-    - nextflow run ./main.nf --align all --reads "CIN*R{1,2}*" --ref "./ref.fa" --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --verbose -with-docker variantcalling;
+    - nextflow run ./main.nf --align all --reads "./data/CIN*R{1,2}*" --ref "./data/ref.fa" --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --verbose -with-docker variantcalling;
     - echo $?
         
 
