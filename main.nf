@@ -163,7 +163,7 @@ process REMOVE_PHIX {
     stats = "${sample_id}-remove_phix-stats.txt"
 
     /*
-    bbduk (Decontamination using kmers)
+    ./bbduk (Decontamination using kmers)
 
     -Xmx${numerical value}(unit size) 
         Defines the maximum size of the heap allocated by the JVM
@@ -332,8 +332,8 @@ process BOWTIE2 {
         bowtie2_log = "${sample_id}.log"
          
     """
-    sudo mkdir $index_dir;
-    sudo chmod 777 $index_dir;
+    mkdir $index_dir;
+    chmod 777 $index_dir;
     bowtie2-build $ref $indexes;
     bowtie2 --threads ${task.cpus} \\
             -x $indexes -1 $r1 -2 $r2 \\
