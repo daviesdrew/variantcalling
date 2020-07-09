@@ -1,5 +1,3 @@
-tice_pipelines/variantcalling/
-(base)
 FROM nfcore/base:1.9
 LABEL authors="Drew Davies" \
       description="Docker image containing all software requirements for the nf-core/illuminavariantcalling pipeline"
