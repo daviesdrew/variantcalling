@@ -5,13 +5,10 @@ LABEL authors="Drew Davies" \
 # Install the conda environment
 COPY environment.yml  /
 RUN cat environment.yml
-COPY /data/CIN-2-QCM18-1264_S1_L001_R1_001.fastq.gz /
-COPY /data/CIN-2-QCM18-1264_S1_L001_R2_001.fastq.gz /
-COPY /data/ref.fa / 
-COPY /data/phix.fa / 
-RUN ls -la
-RUN ls -la /usr/local
-RUN ls /usr/local/data
+COPY CIN-2-QCM18-1264_S1_L001_R1_001.fastq.gz /
+COPY CIN-2-QCM18-1264_S1_L001_R2_001.fastq.gz /
+COPY ref.fa / 
+COPY phix.fa / 
 RUN conda update conda && \
     conda env create -f /environment.yml && \
     conda clean -a
