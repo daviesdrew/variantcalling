@@ -547,8 +547,6 @@ process SNIPPY {
     publishDir "${params.outdir}/logs/${params.prediction}/$method",
                 pattern: "${sample_id}.log", mode: "copy"
     
-    echo true 
-
     input: 
         tuple val(method), path(variant), path(ref), path(depths)
         tuple val(sample_id), path(r1), path(r2)
@@ -566,7 +564,7 @@ process SNIPPY {
     snippy --cpus ${task.cpus} \\
     --ref $ref --R1 $r1 --R2 $r2 \\
     --outdir $outdir;
-    cat .command.log
+    cat .command.log | tee $snippy_log
     
     """
 }
