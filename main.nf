@@ -561,9 +561,10 @@ process SNIPPY {
         snippy_log = "${sample_id}.log"
     """
     
-    snippy --cpus ${task.cpus} \\
-    --ref $ref --R1 $r1 --R2 $r2 \\
-    --outdir $outdir;
+    snippy --cpus 1 \\
+    --ram 1 \\
+    --outdir $outdir \\
+    --ref $ref --R1 $r1 --R2 $r2;
     cat .command.log | tee $snippy_log
     
     """
