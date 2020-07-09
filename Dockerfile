@@ -6,6 +6,7 @@ LABEL authors="Drew Davies" \
 COPY environment.yml  /
 RUN cat environment.yml
 RUN ls -la
+RUN ls -la /usr/local
 ADD data /usr/local/data
 RUN ls /usr/local/data
 COPY CIN-2-QCM18-1264_S1_L001_R1_001.fastq.gz /
