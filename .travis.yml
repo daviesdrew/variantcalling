@@ -9,7 +9,7 @@ before_install:
     - echo "This is the first attempt at .travis.yml for variantcalling"
     - echo "This is an attempt to build the Dockerfile environment"
     - wget -qO- https://get.nextflow.io | bash 
-    - docker build --memory-swap -1 . --file ./Dockerfile --tag variantcalling
+    - docker build --memory="256g" --memory-swap -1 . --file ./Dockerfile --tag variantcalling
     - sudo mv nextflow /usr/local/bin
 
 script:
