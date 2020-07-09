@@ -5,9 +5,8 @@ LABEL authors="Drew Davies" \
 # Install the conda environment
 COPY environment.yml  /
 RUN cat environment.yml
-RUN mkdir data
-COPY data data
-RUN ls
+ADD data /usr/local/data
+RUN ls /usr/local/data
 COPY CIN-2-QCM18-1264_S1_L001_R1_001.fastq.gz /
 COPY CIN-2-QCM18-1264_S1_L001_R2_001.fastq.gz /
 COPY ref.fa / 
