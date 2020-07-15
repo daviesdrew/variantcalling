@@ -559,10 +559,10 @@ process SNIPPY {
     script:
         outdir = "${params.outdir}/variant/snippy/$method"
         snippy_log = "${sample_id}.log"
-        travis = (params.travis == 'true')? '--ram 4': ''
+        //travis = (params.travis == 'true')? '--ram 4': ''
     """
     
-    snippy --cpus ${task.cpus} $travis \\
+    snippy --cpus ${task.cpus} --ram 4 \\
     --outdir $outdir \\
     --ref $ref --R1 $r1 --R2 $r2;
     cat .command.log | tee $snippy_log
@@ -858,7 +858,8 @@ workflow quality_check {
 workflow {
     main:    
         ref = Channel.value(file("${params.ref}"))
-        phix = Channel.value(file("${baseDir}/phix.fa"))
+        
+        phix = Channel.value(file("${baseDir}/${params.phix}"))
         reads = Channel.fromFilePairs(params.reads,
                                       flat: true,
                                       checkIfExists: true)
