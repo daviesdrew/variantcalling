@@ -4,7 +4,7 @@ LABEL authors="Drew Davies" \
 
 COPY environment.yml  /
 RUN cat environment.yml
-COPY CIN-2-QCM18-1264_S1_L001_R1_001.fastq.gz /
+COPY ./reads/CIN-2-QCM18-1264_S1_L001_R1_001.fastq.gz /
 COPY CIN-2-QCM18-1264_S1_L001_R2_001.fastq.gz /
 COPY ref.fa / 
 COPY phix.fa / 
