@@ -3,130 +3,105 @@
 //=============================================================================
 
 //----------------------------------------
-// PROCESSES: BAMINDEX
-// Index sorted bam file
+// PROCESSES: SNIPPY
+// Annotates and predicts variants
 //----------------------------------------
-process BAMINDEX {
+process SNIPPY {
     tag "$sample_id"
 
-    publishDir "${align_dir}", pattern: "*.bai", mode: "copy"
-    
-    echo true            
+    publishDir "${params.outdir}/variant/snippy/$method", 
+                pattern: "*snps.*", mode: "copy"
+    publishDir "${params.outdir}/logs/${params.prediction}/$method",
+                pattern: "${sample_id}.log", mode: "copy"
 
     input:
-        tuple val(method), val(sample_id),
-                path(align), val(align_dir)
+        tuple val(method), path(variant), path(ref), path(depths)
+        tuple val(sample_id), path(r1), path(r2)
 
     output:
-        file "${sample_id}_${params.align}_align_pe.bai"
+        file "${sample_id}.log"
         tuple val(method), val(sample_id),
-                path(align), path(depths), emit: 'align'
+                path(variant), path(depths), emit: 'annotation'
 
     script:
-        indexed_bam = "${sample_id}_${params.align}_align_pe.bai"
-        depths = "${sample_id}_depths.tsv"
+        outdir = "${params.outdir}/variant/snippy/$method"
+        snippy_log = "${sample_id}.log"
 
     """
-    samtools index $align $indexed_bam;
-    samtools depth -a -d 0 $align \\
-    | perl -ne 'chomp \$_; print "${sample_id}\t\$_\n"' > $depths;
+    snippy --cpus ${task.cpus} --ram 4 \\
+    --outdir $outdir \\
+    --ref $ref --R1 $r1 --R2 $r2;
+    cat .command.log | tee $snippy_log
     """
 }
 //----------------------------------------
 
 //----------------------------------------
-// PROCESSES: FREEBAYES
-// Variant Calling
-// Freebayes is the default variant caller
+// PROCESSES: BCFTOOLS_CONSENSUS
+// Build consensus sequence from variants
 //----------------------------------------
-process FREEBAYES {
+process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/variant/${params.variant}/$method",
-                pattern: "${sample_id}*.vcf", mode: "copy"
-    publishDir "${params.outdir}/logs/${params.variant}/$method",
+    publishDir "${params.outdir}/consensus/${params.consensus}/$method",
+                pattern: "*.fa", mode: "copy"
+    publishDir "${params.outdir}/logs/${params.consensus}/$method",
                 pattern: "${sample_id}.log", mode: "copy"
     
     input:
         file ref
         tuple val(method), val(sample_id),
-                path(bam), path(depths)
+                path(variant), path(depths)
 
     output:
         file "${sample_id}.log"
-        tuple val(method), val(sample_id),
-                path(variant), path(ref), path(depths), emit: 'variant'
+        file "${sample_id}_bcftools_consensus.fa"
 
     script:
-        variant = "${sample_id}.vcf"
-        freebayes_log = "${sample_id}.log"
+        zipped = "${variant}.gz"
+        consensus = "${sample_id}_bcftools_consensus.fa"
+        bcftools_consensus_log = "${sample_id}.log"
 
     """
-    freebayes --gvcf --use-mapping-quality \\
-    --genotype-qualities \\
-    -f $ref -g 1000 $bam > $variant;
-    cat .command.log | tee $freebayes_log
+    bgzip $variant;
+    tabix -p vcf $zipped;
+    bcftools consensus -f $ref $zipped > $consensus;
+    cat .command.log | tee $bcftools_consensus_log;
     """
 }
 //----------------------------------------
-
+// PROCESSES: VCF_CONSENSUS
+// Build consensus sequence from variants
 //----------------------------------------
-// PROCESSES: BCFTOOLS_STATS
-// Collect stats from variant calls
-//----------------------------------------
-process BCFTOOLS_STATS {
+process VCF_CONSENSUS {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/variant/method",
-                pattern: "*_stats.txt", mode: "copy"
-    input: 
-        tuple val(method), val(sample_id),
-                path(variant), path(ref), path(depths) 
-
-    output: 
-        file "${sample_id}_stats.txt"
-
-    script:
-        stats = "${sample_id}_stats.txt"
-
-    """
-    bcftools stats -F $ref $variant -v > $stats;
-    """
-}
-//----------------------------------------
-
-//----------------------------------------
-// PROCESSES: BCFTOOLS_FILTER
-// Filtering variant calls
-//----------------------------------------
-process BCFTOOLS_FILTER {
-    tag "$sample_id"
-
-    publishDir "${params.outdir}/variant",
-                pattern: "*_filtered.txt", mode: "copy"
-    publishDir "${params.outdir}/logs/${params.filter}",
+    publishDir "${params.outdir}/consensus/vcf/$method",
+                pattern: "*.fa", mode: "copy"
+    publishDir "${params.outdir}/logs/vcf/$method",
                 pattern: "${sample_id}.log", mode: "copy"
 
-    echo true
-    
     input: 
+        file ref 
         tuple val(method), val(sample_id),
-                path(variant), path(ref), path(depths) 
+                path(variant), path(depths) 
 
     output: 
-        file "${sample_id}_filtered.vcf"
         file "${sample_id}.log"
-        tuple val(method), path(filtered), path(ref), path(depths),
-                emit: 'variant'
+        file "${sample_id}_vcf_consensus.fa"
 
     script:
-        options = "${params.filter_args}"
-        filtered = "${sample_id}_filtered.vcf"
-        bcftools_filter_log = "${sample_id}.log"
+        consensus = "${sample_id}_vcf_consensus.fa"
+        vcf_consensus_log = "${sample_id}.log"
 
     """
-    bcftools filter $options $variant -o $filtered;
-    cat .command.log | tee $bcftools_filter_log;
+    vcf_consensus_builder \\
+        -v $variant \\
+        -d $depths \\
+        -r $ref \\
+        -o $consensus \\
+        --sample-name $sample_id;
+    cat .command.log | tee $vcf_consensus_log;
     """
 }
 //----------------------------------------
@@ -136,55 +111,45 @@ process BCFTOOLS_FILTER {
 //=============================================================================
 
 //----------------------------------------
-// WORKFLOW: variants
+// WORKFLOW: consensus
 // 
 // Takes:
-//      refs = reference genome
-//      align = sorted bam file
+//      variants = variant calls on reads
+//      reads = paired end reads
+//      ref = reference genome
 //
 // Main: 
-//      1. Indexes bam file (align)
-//      2. Variant calling
-//      3. Variant stats
-//      4. Filter variants
-//
-// Emit:
-//      variant = Main.4.out.variant
+//      1. Annotation && effect prediction 
+//      2. Consensus
 //
 //----------------------------------------
-workflow variants {
+workflow consensus {
 
     take:
+        variants
+        reads
         ref
-        align
 
     main:
-        BAMINDEX(align)
+        if (params.prediction == 'different annotation/prediction tool') {
 
-        if (params.variant == 'other variant calling tool') {
-
-            FREEBAYES(ref, BAMINDEX.out.align)
+            SNIPPY(variants, reads)
 
         } else {
 
-            FREEBAYES(ref, BAMINDEX.out.align)
+            SNIPPY(variants, reads)
 
         }
 
-        BCFTOOLS_STATS(FREEBAYES.out.variant)
+        if (params.consensus == 'bcftools') {
 
-        if (params.filter == 'other filtering tool') {
-
-            BCFTOOLS_FILTER(FREEBAYES.out.variant)
+            BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
 
         } else {
 
-            BCFTOOLS_FILTER(FREEBAYES.out.variant)
+            VCF_CONSENSUS(ref, SNIPPY.out.annotation)
 
         }
-
-    emit: 
-        variant = BCFTOOLS_FILTER.out.variant
 
 }
 //----------------------------------------
