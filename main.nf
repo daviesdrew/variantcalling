@@ -125,107 +125,11 @@ summary['Script Dir']           = workflow.projectDir
 summary['Config Profile']       = workflow.profile
 
 //=============================================================================
-// PROCESSES
-//=============================================================================
-include BWA from "./modules/align.nf"
-include BOWTIE2 from "./modules/align.nf"
-include MINIMAP2 from "./modules/align.nf"
-
-//=============================================================================
 // WORKFLOW DEFINITION 
 //=============================================================================
-include quality_check from "./modules/quality_check.nf"
-include variants from "./modules/variant.nf"
-include consensus from "./modules/consensus.nf"
-
-//----------------------------------------
-// WORKFLOW: bwa
-// Takes:
-//      ref = reference genome
-//      reads = paired end reads
-//      phix = phix genome
-//      
-// Main: 
-//      1. Quality check and read filtering 
-//      2. Read mapping using BWA
-//      3. Variant calling
-//      4. Consensus 
-//
-//----------------------------------------
-workflow bwa {
-
-    take: 
-        ref
-        reads
-        phix
-
-    main:
-        quality_check(reads, phix)
-        BWA(ref, quality_check.out.reads)
-        variants(ref, BWA.out.align)
-        consensus(variants.out.variant,
-                  reads, ref)
-}
-//----------------------------------------
-
-//----------------------------------------
-// WORKFLOW: bowtie2
-// Takes:
-//      ref = reference genome
-//      reads = paired end reads
-//      phix = phix genome
-//      
-// Main: 
-//      1. Quality check and read filtering 
-//      2. Read mapping using BOWTIE2
-//      3. Variant calling
-//      4. Consensus 
-//
-//----------------------------------------
-workflow bowtie2 {
-
-    take: 
-        ref
-        reads
-        phix
-
-    main:
-        quality_check(reads, phix)
-        BOWTIE2(ref, quality_check.out.reads)
-        variants(ref, BOWTIE2.out.align)
-        consensus(variants.out.variant, reads, ref)
-}
-//----------------------------------------
-
-//----------------------------------------
-// WORKFLOW: minimap2
-// Takes:
-//      ref = reference genome
-//      reads = paired end reads
-//      phix = phix genome
-//      
-// Main: 
-//      1. Quality check and read filtering 
-//      2. Read mapping using MINIMAP2
-//      3. Variant calling
-//      4. Consensus 
-//
-//----------------------------------------
-workflow minimap2 {
-
-    take: 
-        ref
-        reads
-        phix 
-
-    main:
-        quality_check(reads, phix)
-        MINIMAP2(ref, quality_check.out.reads)
-        variants(ref, MINIMAP2.out.align)
-        consensus(variants.out.variant,reads, ref)
-}
-
-//----------------------------------------
+include bwa from "./modules/pipes.nf"
+include bowtie2 from "./modules/pipes.nf"
+include minimap2 from "./modules/pipes.nf"
 
 workflow {
     main:    
