@@ -13,7 +13,7 @@ before_install:
     - sudo mv nextflow /usr/local/bin
 
 script:
-    - nextflow run ./main.nf --align all --reads "./CIN*R{1,2}*" --ref "./ref.fa" --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --verbose -with-docker variantcalling:latest --travis true;
+    - nextflow run ./main.nf --align all --reads "./CIN*R{1,2}" --ref "./ref.fa" --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --verbose -with-docker variantcalling:latest --travis true;
 
 after_success:
     - echo "CI build of variantcalling pipeline succeeded"
