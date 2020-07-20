@@ -63,26 +63,6 @@ if (params.help) {
 }
 
 //=============================================================================
-// HELPER FUNCTIONS
-//=============================================================================
-
-//----------------------------------------
-// HELPER FUNCTIONS: PRINT TOOL ARGS
-//----------------------------------------
-def print_tool_args(tool, tool_args) {
-    println(tool_args)
-    println("""$tool: ${params[tool]}
-    => ${tool_args[0]}: ${params[tool_args[0]]}\n""") 
-}
-//----------------------------------------
-
-//=============================================================================
-// INPUT VALIDATION
-//=============================================================================
-
-params.tool_args.each{ k, v ->  print_tool_args(k, v) }
-
-//=============================================================================
 // WORKFLOW RUN PARAMETERS LOGGING
 //=============================================================================
 
@@ -124,6 +104,10 @@ summary['Output Dir']           = file(params.outdir)
 summary['Script Dir']           = workflow.projectDir
 summary['Config Profile']       = workflow.profile
 
+log.info summary.collect { k, v -> "${k.padRight(15)}: $v" }.join("\n")
+log.info "========================================="
+
+
 //=============================================================================
 // WORKFLOW DEFINITION 
 //=============================================================================
@@ -133,8 +117,7 @@ include minimap2 from "./modules/pipes.nf"
 
 workflow {
     main:    
-        ref = Channel.value(file("${params.ref}"))
-        
+        ref = Channel.fromPath(params.ref) 
         phix = Channel.value(file("${baseDir}/${params.phix}"))
         reads = Channel.fromFilePairs(params.reads,
                                       flat: true,

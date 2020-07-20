@@ -13,28 +13,27 @@ process BWA {
     publishDir "${params.outdir}/align/bwa",
                 pattern: "*.bam", mode: "copy"
     publishDir "${params.outdir}/logs/bwa",
-                pattern: "${sample_id}.log", mode: "copy"
+                pattern: ".command.log", 
+                mode: "copy",
+                saveAs: { file -> "bwa_mem_${sample_id}.log" } 
                 
     input:
         val ref
         tuple sample_id, path(r1), path(r2)
 
     output:
-        file "${sample_id}.log"
-        tuple val('bwa'), val(sample_id), path(bam), val(align_dir), emit: "align"
+        tuple val(sample_id), val('bwa'), path(bam), emit: "align"
+        file ".command.log"
 
     script:
         align = "${sample_id}_bwa_align_pe.sam"
         bam = "${sample_id}_bwa_align_pe.bam"
-        align_dir = "${params.outdir}/align/bwa"
-        bwa_log = "${sample_id}.log"
 
     """
     bwa index -a bwtsw $ref;
     bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align;
     samtools sort $align -@${task.cpus} \\
     | samtools view -F4 -b -o $bam;
-    cat .command.log | tee $bwa_log;
     """
 }
 //----------------------------------------
@@ -51,24 +50,23 @@ process BOWTIE2 {
     publishDir "${params.outdir}/align/bowtie2",
                 pattern: "*.bam", mode: "copy"
     publishDir "${params.outdir}/logs/bowtie2",
-                pattern: "${sample_id}.log", mode: "copy"
-                
+                pattern: ".command.log", 
+                mode: "copy",
+                saveAs: { file -> "bowtie2_${sample_id}.log" } 
+               
     input:
         val ref
         tuple sample_id, path(r1), path(r2)
 
     output:
-        file "${sample_id}.log"
+        tuple val(sample_id), val('bowtie2'), path(bam), emit: "align"
         file "${sample_id}_bowtie2_align_pe.bam"
-        tuple val('bowtie2'), val(sample_id), path(bam), 
-                val(align_dir), emit: "align"
+        file ".command.log"
 
     script:
         index_dir = "./index"
         indexes = "./index/index"
         bam = "${sample_id}_bowtie2_align_pe.bam"
-        align_dir = "${params.outdir}/align/bowtie2"
-        bowtie2_log = "${sample_id}.log"
 
     """
     mkdir $index_dir
@@ -78,7 +76,6 @@ process BOWTIE2 {
         -x $indexes -1 $r2 -2 $r2 \\
     | samtools sort -@${task.cpus} \\
     | samtools view -F4 -b -o $bam;
-    cat .command.log | tee $bowtie2_log;
     """
 }
 //----------------------------------------
@@ -94,28 +91,27 @@ process MINIMAP2 {
     publishDir "${params.outdir}/align/minimap2",
                 pattern: "*.bam", mode: "copy"
     publishDir "${params.outdir}/logs/minimap2",
-                pattern: "${sample_id}.log", mode: "copy"
-                
+                pattern: ".command.log", 
+                mode: "copy",
+                saveAs: { file -> "minimap2_${sample_id}.log" } 
+
     input:
         val ref
         tuple sample_id, path(r1), path(r2)
 
     output:
+        tuple val(sample_id), val('minimap2'), path(bam), emit: "align"
         file "${sample_id}_minimap2_align_pe.bam"
-        file "${sample_id}.log"
-        tuple val('minimap2'), val(sample_id), path(bam), val(align_dir), emit: "align"
+        file ".command.log"
 
     script:
         bam = "${sample_id}_minimap2_align_pe.bam"
-        align_dir = "${params.outdir}/align/minimap2"
-        minimap2_log = "${sample_id}.log"
 
     """
     minimap2 -a -t ${task.cpus} \\
         -ax sr $ref $r1 $r2 \\
     | samtools sort -@${task.cpus} \\
     | samtools view -F4 -b -o $bam;
-    cat .command.log | tee $minimap2_log;
     """
 }
 //----------------------------------------
