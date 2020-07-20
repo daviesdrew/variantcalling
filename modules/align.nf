@@ -31,8 +31,8 @@ process BWA {
 
     """
     bwa index -a bwtsw $ref;
-    bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align;
-    samtools sort $align -@${task.cpus} \\
+    bwa mem -t ${task.cpus} $ref $r1 $r2 \\
+    | samtools sort -@${task.cpus} \\
     | samtools view -F4 -b -o $bam;
     """
 }

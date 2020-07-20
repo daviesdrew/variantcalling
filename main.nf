@@ -115,6 +115,8 @@ include bwa from "./modules/pipes.nf"
 include bowtie2 from "./modules/pipes.nf"
 include minimap2 from "./modules/pipes.nf"
 
+include quality_check from "./modules/quality_check.nf"
+
 workflow {
     main:    
         ref = Channel.fromPath(params.ref) 
@@ -133,14 +135,15 @@ workflow {
                                      other characters expanded by the shell!)"""}
                        //Convert specified files into tuples
                        .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
-
+        
+        quality_check(reads, phix)
         if(params.align == 'bowtie2' || params.align == 'all')
-            bowtie2(ref, reads, phix)
+            bowtie2(ref, quality_check.out.reads)
 
         if(params.align == 'minimap2' || params.align == 'all')
-            minimap2(ref, reads, phix) 
+            minimap2(ref, quality_check.out.reads) 
         
         if(params.align == 'bwa' || params.align == 'all')
-            bwa(ref, reads, phix)
+            bwa(ref, quality_check.out.reads)
 
 }
