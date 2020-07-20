@@ -63,26 +63,6 @@ if (params.help) {
 }
 
 //=============================================================================
-// HELPER FUNCTIONS
-//=============================================================================
-
-//----------------------------------------
-// HELPER FUNCTIONS: PRINT TOOL ARGS
-//----------------------------------------
-def print_tool_args(tool, tool_args) {
-    println(tool_args)
-    println("""$tool: ${params[tool]}
-    => ${tool_args[0]}: ${params[tool_args[0]]}\n""") 
-}
-//----------------------------------------
-
-//=============================================================================
-// INPUT VALIDATION
-//=============================================================================
-
-params.tool_args.each{ k, v ->  print_tool_args(k, v) }
-
-//=============================================================================
 // WORKFLOW RUN PARAMETERS LOGGING
 //=============================================================================
 
@@ -123,6 +103,10 @@ summary['Working Dir']          = workflow.workDir
 summary['Output Dir']           = file(params.outdir)
 summary['Script Dir']           = workflow.projectDir
 summary['Config Profile']       = workflow.profile
+
+log.info summary.collect { k, v -> "${k.padRight(15)}: $v" }.join("\n")
+log.info "========================================="
+
 
 //=============================================================================
 // WORKFLOW DEFINITION 

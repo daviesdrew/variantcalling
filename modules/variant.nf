@@ -45,7 +45,9 @@ process FREEBAYES {
     publishDir "${params.outdir}/variant/${params.variant}/$method",
                 pattern: "${sample_id}*.vcf", mode: "copy"
     publishDir "${params.outdir}/logs/${params.variant}/$method",
-                pattern: "${sample_id}.log", mode: "copy"
+                pattern: ".command.log", 
+                mode: "copy",
+                saveAs: { file -> "freebayes_${sample_id}.log" }
     
     input:
         file ref
@@ -53,19 +55,17 @@ process FREEBAYES {
                 path(bam), path(depths)
 
     output:
-        file "${sample_id}.log"
         tuple val(sample_id), val(method),
                 path(variant), path(ref), path(depths), emit: 'variant'
+        file ".command.log"
 
     script:
         variant = "${sample_id}.vcf"
-        freebayes_log = "${sample_id}.log"
 
     """
     freebayes --gvcf --use-mapping-quality \\
     --genotype-qualities \\
     -f $ref -g 1000 $bam > $variant;
-    cat .command.log | tee $freebayes_log
     """
 }
 //----------------------------------------
@@ -105,7 +105,9 @@ process BCFTOOLS_FILTER {
     publishDir "${params.outdir}/variant",
                 pattern: "*_filtered.txt", mode: "copy"
     publishDir "${params.outdir}/logs/${params.filter}",
-                pattern: "${sample_id}.log", mode: "copy"
+                pattern: "${sample_id}.log", 
+                mode: "copy",
+                saveAs: { file -> "bcftools_filter_${sample_id}.log" }
 
     echo true
     
@@ -114,19 +116,17 @@ process BCFTOOLS_FILTER {
                 path(variant), path(ref), path(depths) 
 
     output: 
-        file "${sample_id}_filtered.vcf"
-        file "${sample_id}.log"
         tuple val(method), path(filtered), path(ref), path(depths),
                 emit: 'variant'
+        file "${sample_id}_filtered.vcf"
+        file ".command.log"
 
     script:
         options = "${params.filter_args}"
         filtered = "${sample_id}_filtered.vcf"
-        bcftools_filter_log = "${sample_id}.log"
 
     """
     bcftools filter $options $variant -o $filtered;
-    cat .command.log | tee $bcftools_filter_log;
     """
 }
 //----------------------------------------

@@ -12,26 +12,26 @@ process SNIPPY {
     publishDir "${params.outdir}/variant/snippy/$method", 
                 pattern: "*snps.*", mode: "copy"
     publishDir "${params.outdir}/logs/${params.prediction}/$method",
-                pattern: "${sample_id}.log", mode: "copy"
+                pattern: ".command.log", 
+                mode: "copy",
+                saveAs: { file -> "snippy_${sample_id}.log" }
 
     input:
         tuple val(method), path(variant), path(ref), path(depths)
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        file "${sample_id}.log"
         tuple val(method), val(sample_id),
                 path(variant), path(depths), emit: 'annotation'
-
+        file ".command.log"
+    
     script:
         outdir = "${params.outdir}/variant/snippy/$method"
-        snippy_log = "${sample_id}.log"
 
     """
     snippy --cpus ${task.cpus} --ram 4 \\
     --outdir $outdir \\
     --ref $ref --R1 $r1 --R2 $r2;
-    cat .command.log | tee $snippy_log
     """
 }
 //----------------------------------------
