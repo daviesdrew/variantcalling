@@ -5,9 +5,11 @@ LABEL authors="Drew Davies" \
 COPY environment.yml  /
 RUN cat environment.yml
 COPY ./reads/CIN-2-QCM18-1264_S1_L001_R1_001.fastq.gz /
-COPY CIN-2-QCM18-1264_S1_L001_R2_001.fastq.gz /
-COPY ref.fa / 
-COPY phix.fa / 
+COPY ./reads/CIN-2-QCM18-1264_S1_L001_R2_001.fastq.gz /
+RUN ls . -l
+COPY ./test/ref.fa / 
+COPY ./data/phix.fa / 
+RUN ls . -l
 RUN conda update conda && \
     conda env create -f /environment.yml && \
     conda clean -a
