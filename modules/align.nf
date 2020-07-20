@@ -11,7 +11,7 @@ process BWA {
     tag "$sample_id"
 
     publishDir "${params.outdir}/align/bwa",
-                pattern: "*.bam", mode: "copy"
+                pattern: "*.bam"
     publishDir "${params.outdir}/logs/bwa",
                 pattern: ".command.log", 
                 mode: "copy",
@@ -31,8 +31,8 @@ process BWA {
 
     """
     bwa index -a bwtsw $ref;
-    bwa mem -P -t ${task.cpus} $ref $r1 $r2 -o $align;
-    samtools sort $align -@${task.cpus} \\
+    bwa mem -t ${task.cpus} $ref $r1 $r2 \\
+    | samtools sort -@${task.cpus} \\
     | samtools view -F4 -b -o $bam;
     """
 }
@@ -48,7 +48,7 @@ process BOWTIE2 {
 
     publishDir "./index", pattern: "index*bt2*", mode: "copy"
     publishDir "${params.outdir}/align/bowtie2",
-                pattern: "*.bam", mode: "copy"
+                pattern: "*.bam"
     publishDir "${params.outdir}/logs/bowtie2",
                 pattern: ".command.log", 
                 mode: "copy",
@@ -89,7 +89,7 @@ process MINIMAP2 {
     tag "$sample_id"
 
     publishDir "${params.outdir}/align/minimap2",
-                pattern: "*.bam", mode: "copy"
+                pattern: "*.bam"
     publishDir "${params.outdir}/logs/minimap2",
                 pattern: ".command.log", 
                 mode: "copy",

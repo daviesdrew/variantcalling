@@ -5,7 +5,6 @@ include BWA from "./align.nf"
 include BOWTIE2 from "./align.nf"
 include MINIMAP2 from "./align.nf"
 
-include quality_check from "./quality_check.nf"
 include variants from "./variant.nf"
 include consensus from "./consensus.nf"
 
@@ -15,13 +14,11 @@ include consensus from "./consensus.nf"
 // Takes:
 //      ref = reference genome
 //      reads = paired end reads
-//      phix = phix genome
 //
 // Main: 
-//      1. Quality check and read filtering
-//      2. Read mapping using BWA
-//      3. Variant calling
-//      4. Consensus
+//      1. Read mapping using BWA
+//      2. Variant calling
+//      3. Consensus
 //
 //----------------------------------------
 workflow bwa {
@@ -29,11 +26,9 @@ workflow bwa {
     take:
         ref
         reads
-        phix 
 
     main:
-        quality_check(reads, phix)
-        BWA(ref, quality_check.out.reads)
+        BWA(ref, reads)
         variants(ref, BWA.out.align)
         consensus(variants.out.variant,
                   reads, ref)
@@ -46,13 +41,11 @@ workflow bwa {
 // Takes:
 //      ref = reference genome
 //      reads = paired end reads
-//      phix = phix genome
 //
 // Main: 
-//      1. Quality check and read filtering
-//      2. Read mapping using BOWTIE2
-//      3. Variant calling
-//      4. Consensus
+//      1. Read mapping using BOWTIE2
+//      2. Variant calling
+//      3. Consensus
 //
 //----------------------------------------
 workflow bowtie2 {
@@ -60,11 +53,9 @@ workflow bowtie2 {
     take:
         ref
         reads
-        phix 
 
     main:
-        quality_check(reads, phix)
-        BOWTIE2(ref, quality_check.out.reads)
+        BOWTIE2(ref, reads)
         variants(ref, BOWTIE2.out.align)
         consensus(variants.out.variant,
                   reads, ref)
@@ -77,13 +68,11 @@ workflow bowtie2 {
 // Takes:
 //      ref = reference genome
 //      reads = paired end reads
-//      phix = phix genome
 //
 // Main: 
-//      1. Quality check and read filtering
-//      2. Read mapping using MINIMAP2
-//      3. Variant calling
-//      4. Consensus
+//      1. Read mapping using MINIMAP2
+//      2. Variant calling
+//      3. Consensus
 //
 //----------------------------------------
 workflow minimap2 {
@@ -91,11 +80,9 @@ workflow minimap2 {
     take:
         ref
         reads
-        phix 
 
     main:
-        quality_check(reads, phix)
-        MINIMAP2(ref, quality_check.out.reads)
+        MINIMAP2(ref, reads)
         variants(ref, MINIMAP2.out.align)
         consensus(variants.out.variant,
                   reads, ref)
