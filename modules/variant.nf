@@ -9,13 +9,11 @@
 process BAMINDEX {
     tag "$sample_id"
 
-    publishDir "${align_dir}", pattern: "*.bai", mode: "copy"
+    publishDir "${params.outdir}/align/$method", 
+                pattern: "*.bai", mode: "copy"
     
-    echo true            
-
     input:
-        tuple val(sample_id), val(method),
-                path(align), val(align_dir)
+        tuple val(sample_id), val(method), path(align)
 
     output:
         tuple val(sample_id), val(method),

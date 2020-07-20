@@ -117,8 +117,7 @@ include minimap2 from "./modules/pipes.nf"
 
 workflow {
     main:    
-        ref = Channel.value(file("${params.ref}"))
-        
+        ref = Channel.fromPath(params.ref) 
         phix = Channel.value(file("${baseDir}/${params.phix}"))
         reads = Channel.fromFilePairs(params.reads,
                                       flat: true,

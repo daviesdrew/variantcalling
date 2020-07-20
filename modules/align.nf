@@ -22,14 +22,12 @@ process BWA {
         tuple sample_id, path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val('bwa'), path(bam), 
-                val(align_dir), emit: "align"
+        tuple val(sample_id), val('bwa'), path(bam), emit: "align"
         file ".command.log"
 
     script:
         align = "${sample_id}_bwa_align_pe.sam"
         bam = "${sample_id}_bwa_align_pe.bam"
-        align_dir = "${params.outdir}/align/bwa"
 
     """
     bwa index -a bwtsw $ref;
@@ -61,8 +59,7 @@ process BOWTIE2 {
         tuple sample_id, path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val('bowtie2'), path(bam), 
-                val(align_dir), emit: "align"
+        tuple val(sample_id), val('bowtie2'), path(bam), emit: "align"
         file "${sample_id}_bowtie2_align_pe.bam"
         file ".command.log"
 
@@ -70,7 +67,6 @@ process BOWTIE2 {
         index_dir = "./index"
         indexes = "./index/index"
         bam = "${sample_id}_bowtie2_align_pe.bam"
-        align_dir = "${params.outdir}/align/bowtie2"
 
     """
     mkdir $index_dir
@@ -104,14 +100,12 @@ process MINIMAP2 {
         tuple sample_id, path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val('minimap2'), path(bam), 
-                val(align_dir), emit: "align"
+        tuple val(sample_id), val('minimap2'), path(bam), emit: "align"
         file "${sample_id}_minimap2_align_pe.bam"
         file ".command.log"
 
     script:
         bam = "${sample_id}_minimap2_align_pe.bam"
-        align_dir = "${params.outdir}/align/minimap2"
 
     """
     minimap2 -a -t ${task.cpus} \\
