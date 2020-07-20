@@ -9,7 +9,7 @@ before_install:
     - echo "Installing nextflow"
     - wget -qO- https://get.nextflow.io | bash 
     - echo "Building docker container"
-    - docker build --memory="256g" --memory-swap -1 . --file ./Dockerfile --tag variantcalling
+    - docker build . --file ./Dockerfile --tag variantcalling
     - sudo mv nextflow /usr/local/bin
 
 script:
