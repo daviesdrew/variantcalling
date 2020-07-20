@@ -29,7 +29,7 @@ process SNIPPY {
         outdir = "${params.outdir}/variant/snippy/$method"
 
     """
-    snippy --cpus ${task.cpus} --ram 4 \\
+    snippy --cpus ${task.cpus} \\
     --outdir $outdir \\
     --ref $ref --R1 $r1 --R2 $r2;
     """
