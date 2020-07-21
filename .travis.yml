@@ -8,15 +8,14 @@ services: docker
 on: [push, pull_request]
 
 install:
-    run: |
-        echo "Installing Nextflow"
-        wget -qO- https://get.nextflow.io | bash
-        sudo mv nextflow /usr/local/bin
+    - echo "Installing Nextflow"
+    - wget -qO- https://get.nextflow.io | bash
+    - sudo mv nextflow /usr/local/bin
     
-    - name: Build Docker Image
-      run : |
-        echo "Build docker image"
-        docker build . --file ./Dockerfile --tag variantcalling
+    
+before_script:
+    - echo "Build docker image"
+    - docker build . --file ./Dockerfile --tag variantcalling
     
     #- name: Pull Docker Image
     #  run : | 
