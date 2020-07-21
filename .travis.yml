@@ -8,8 +8,7 @@ services: docker
 on: [push, pull_request]
 
 install:
-    - name: Install Nextflow
-      run: |
+    run: |
         echo "Installing Nextflow"
         wget -qO- https://get.nextflow.io | bash
         sudo mv nextflow /usr/local/bin
