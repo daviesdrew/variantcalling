@@ -1,22 +1,46 @@
-language: groovy
-os: linux
-dist: bionic
-arch: amd64
-sudo: required
-services: docker
+on: [push, pull_request]
 
-before_install:
-    - echo "Installing nextflow"
-    - wget -qO- https://get.nextflow.io | bash 
-    - sudo mv nextflow /usr/local/bin
-    - echo "Building docker container"
-    - docker build . --file ./Dockerfile --tag variantcalling
+jobs: 
+    test:
+        env:
+            NXF_VER: ${{ matrix.nxf_ver }}
+            NXF_ANSI_LOG: false
+        
+        runs-on: ubuntu-latest
+        language: groovy
+        sudo: required
+        services: docker
+        
+        strategy: 
+            matrix:
+                nxf_ver: ['19.10.0', '']
+                    
+        steps:
+            - name: Install Nextflow
+              run: |
+                echo "Installing Nextflow"
+                wget -qO- https://get.nextflow.io | bash
+                sudo mv nextflow /usr/local/bin
 
-script:
-    - nextflow run ./main.nf --align all --reads "./CIN*R{1,2}" --ref "./ref.fa" --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --verbose -with-docker variantcalling:latest --travis true;
+            - name: Build Docker Image
+              run : |
+                echo "Build docker image"
+                docker build . --file ./Dockerfile --tag variantcalling
 
-after_success:
-    - echo "CI build of variantcalling pipeline succeeded"
+            - name: Pull Docker Image
+              run : | 
+                echo "Pull Docker Image"
+                docker pull daviesdrew/pipelines:variantcalling
+                docker tag daviesdrew/pipelines:variantcalling daviesdrew/pipelines:variantcalling
+                
+            - name: Run Pipeline With Test Data
+              run : | 
+                echo ${GITHUB_WORKSPACE}
+                nextflow run ${GITHUB_WORKSPACE} -profile test,docker 
 
-after_failure: 
-    - echo "CI build of variantcalling pipeline failed"
+        after_success:
+            - echo "CI build of variantcalling pipeline succeeded"
+
+     
+        after_failure: 
+            - echo "CI build of variantcalling pipeline failed"
