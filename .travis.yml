@@ -4,6 +4,11 @@ services: docker
 
 on: [push, pull_request]
 
+addons:
+    apt:
+        packages:
+            ant
+
 jobs: 
     test:
         env:
