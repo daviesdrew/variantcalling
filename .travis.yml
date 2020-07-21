@@ -27,16 +27,16 @@ jobs:
                 echo "Build docker image"
                 docker build . --file ./Dockerfile --tag variantcalling
 
-            - name: Pull Docker Image
-              run : | 
-                echo "Pull Docker Image"
-                docker pull daviesdrew/pipelines:variantcalling
-                docker tag daviesdrew/pipelines:variantcalling daviesdrew/pipelines:variantcalling
+            #- name: Pull Docker Image
+            #  run : | 
+            #    echo "Pull Docker Image"
+            #    docker pull daviesdrew/pipelines:variantcalling
+            #    docker tag daviesdrew/pipelines:variantcalling daviesdrew/pipelines:variantcalling
                 
             - name: Run Pipeline With Test Data
               run : | 
                 echo ${GITHUB_WORKSPACE}
-                nextflow run ${GITHUB_WORKSPACE} -profile test,docker 
+                nextflow run main.nf -profile test -with-docker variantcalling:latest --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 
 
         after_success:
             - echo "CI build of variantcalling pipeline succeeded"
