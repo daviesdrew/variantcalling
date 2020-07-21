@@ -15,7 +15,7 @@ install:
     
 before_script:
     - echo "Build docker image"
-    - docker build . --file ./Dockerfile --tag variantcalling
+    - sudo docker build . --file ./Dockerfile --tag variantcalling
     
     #- name: Pull Docker Image
     #  run : | 
