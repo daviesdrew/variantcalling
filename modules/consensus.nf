@@ -16,6 +16,8 @@ process SNIPPY {
                 mode: "copy",
                 saveAs: { file -> "snippy_${sample_id}.log" }
 
+    echo true 
+
     input:
         tuple val(method), path(variant), path(ref), path(depths)
         tuple val(sample_id), path(r1), path(r2)
@@ -27,9 +29,10 @@ process SNIPPY {
     
     script:
         outdir = "${params.outdir}/variant/snippy/$method"
-        travis = (params.travis == 'true') ? '--ram 4' : ''
+        travis = (params.travis == true) ? '--ram 4' : ''
         
     """
+    echo $travis;
     snippy --cpus ${task.cpus} $travis \\
     --outdir $outdir \\
     --ref $ref --R1 $r1 --R2 $r2;
