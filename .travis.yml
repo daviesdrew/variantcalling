@@ -24,7 +24,7 @@ before_script:
     #    docker tag daviesdrew/pipelines:variantcalling daviesdrew/pipelines:variantcalling
 scripts:                
     - echo ${GITHUB_WORKSPACE}
-    - nextflow run main.nf -profile test -with-docker variantcalling:latest --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --align all
+    - nextflow run main.nf -profile test -with-docker variantcalling:latest --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --align all --travis 'true'
 
 after_success:
     - echo "CI build of variantcalling pipeline succeeded"

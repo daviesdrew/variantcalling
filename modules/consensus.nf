@@ -27,9 +27,10 @@ process SNIPPY {
     
     script:
         outdir = "${params.outdir}/variant/snippy/$method"
+        travis = (params.travis == 'true') ? '--ram 4' : ''
         
     """
-    snippy --cpus ${task.cpus} \\
+    snippy --cpus ${task.cpus} $travis \\
     --outdir $outdir \\
     --ref $ref --R1 $r1 --R2 $r2;
     """
