@@ -79,6 +79,7 @@ summary['Pipeline Version']     = workflow.manifest.version
 summary['Run Name']             = custom_runName ?: workflow.runName
 summary['Reads']                = params.reads
 summary['Reference']            = params.ref
+summary['Phix']                 = params.phix
 
 summary['Aligner']              = params.align
 summary['Aligner Args']         = params.align_args
