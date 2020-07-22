@@ -10,7 +10,7 @@ process SNIPPY {
     tag "$sample_id"
 
     publishDir "${params.outdir}/variant/snippy/$method", 
-                pattern: "*snps.*", mode: "copy"
+                pattern: "${sample_id}*", mode: "copy"
     publishDir "${params.outdir}/logs/${params.prediction}/$method",
                 pattern: ".command.log", 
                 mode: "copy",
