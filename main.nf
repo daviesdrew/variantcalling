@@ -89,6 +89,7 @@ summary['Filter']               = params.filter
 summary['Filter Args']          = params.filter_args
 summary['Consensus']            = params.consensus
 summary['Consensus Args']       = params.consensus_args
+summary['Travis boolean']       = params.travis
 
 summary['Max Memory']           = params.max_memory
 summary['Max CPUs']             = params.max_cpus
