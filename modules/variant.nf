@@ -16,8 +16,10 @@ process BAMINDEX {
         tuple val(sample_id), val(file_base), path(align)
 
     output:
-        tuple val(sample_id), path(align), path(depths), emit: 'align'
+        tuple val(sample_id), val(file_base), path(align), emit: 'align'
+        path depths, emit: 'depths'
         file "${indexed_bam}"
+        file "${depths}"
 
     script:
         indexed_bam = "${file_base}.bai"
@@ -39,25 +41,25 @@ process BAMINDEX {
 process FREEBAYES {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/variant/${params.variant}/$method",
+    publishDir "${params.outdir}/variant/${params.variant}",
                 pattern: "${sample_id}*.vcf", mode: "copy"
-    publishDir "${params.outdir}/logs/${params.variant}/$method",
+    publishDir "${params.outdir}/logs/${params.variant}",
                 pattern: ".command.log", 
                 mode: "copy",
-                saveAs: { file -> "freebayes_${sample_id}.log" }
+                saveAs: { file -> "${logfile}" }
     
     input:
         file ref
-        tuple val(sample_id), path(bam), path(depths)
+        tuple val(sample_id), val(file_base), path(bam)
 
     output:
-        tuple val(sample_id), path(variant), 
-              path(ref), path(depths), 
-              emit: 'variant'
+        tuple val(sample_id), val(file_base), path(variant), 
+              path(ref), emit: 'variant'
         file ".command.log"
-
+    
     script:
-        variant = "${sample_id}.vcf"
+        variant = "${file_base}.vcf"
+        logfile = "${file_base}.log"
 
     """
     freebayes --gvcf --use-mapping-quality \\
@@ -74,16 +76,16 @@ process FREEBAYES {
 process BCFTOOLS_STATS {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/variant/method",
-                pattern: "*_stats.txt", mode: "copy"
+    publishDir "${params.outdir}/variant/stats",
+                pattern: "*_STATS.txt", mode: "copy"
     input: 
-        tuple val(sample_id), path(variant), path(ref), path(depths) 
+        tuple val(sample_id), val(file_base), path(variant), path(ref) 
 
     output: 
-        file "${sample_id}_stats.txt"
+        file "${stats}"
 
     script:
-        stats = "${sample_id}_stats.txt"
+        stats = "${file_base}_STATS.txt"
 
     """
     bcftools stats -F $ref $variant -v > $stats;
@@ -103,22 +105,21 @@ process BCFTOOLS_FILTER {
     publishDir "${params.outdir}/logs/${params.filter}",
                 pattern: "${sample_id}.log", 
                 mode: "copy",
-                saveAs: { file -> "bcftools_filter_${sample_id}.log" }
+                saveAs: { file -> "${logfile}" } 
 
-    echo true
     
     input: 
-        tuple val(sample_id), path(variant), path(ref), path(depths) 
+        tuple val(sample_id), val(file_base), path(variant), path(ref) 
 
     output: 
-        tuple val(method), path(filtered), path(ref), path(depths),
-                emit: 'variant'
-        file "${sample_id}_filtered.vcf"
+        tuple val(file_base), path(filtered), path(ref), emit: 'variant'
+        file "${filtered}" 
         file ".command.log"
 
     script:
         options = "${params.filter_args}"
-        filtered = "${sample_id}_filtered.vcf"
+        filtered = "${file_base}_FILTERED.vcf"
+        logfile = "${file_base}.log"
 
     """
     bcftools filter $options $variant -o $filtered;
@@ -179,6 +180,7 @@ workflow variants {
         }
 
     emit: 
+        depths = BAMINDEX.out.depths
         variant = BCFTOOLS_FILTER.out.variant
 
 }

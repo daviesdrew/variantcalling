@@ -31,6 +31,7 @@ workflow bwa {
         BWA(ref, reads)
         variants(ref, BWA.out.align)
         consensus(variants.out.variant,
+                  variants.out.depths, 
                   reads, ref)
 }
 //----------------------------------------
@@ -58,6 +59,7 @@ workflow bowtie2 {
         BOWTIE2(ref, reads)
         variants(ref, BOWTIE2.out.align)
         consensus(variants.out.variant,
+                  variants.out.depths, 
                   reads, ref)
 }
 //----------------------------------------
@@ -85,6 +87,7 @@ workflow minimap2 {
         MINIMAP2(ref, reads)
         variants(ref, MINIMAP2.out.align)
         consensus(variants.out.variant,
+                  variants.out.depths,
                   reads, ref)
 }
 //----------------------------------------
