@@ -9,25 +9,26 @@
 process SNIPPY {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/variant/snippy/$method", 
-                pattern: "${sample_id}*", mode: "copy"
-    publishDir "${params.outdir}/logs/${params.prediction}/$method",
+    publishDir "${params.outdir}/variant/snippy", 
+                pattern: "${file_base}*", mode: "copy"
+    publishDir "${params.outdir}/logs/${params.prediction}",
                 pattern: ".command.log", 
                 mode: "copy",
-                saveAs: { file -> "snippy_${sample_id}.log" }
-
+                saveAs: { file -> "${logfile}" }
+    
     input:
-        tuple val(method), path(variant), path(ref), path(depths)
+        tuple val(file_base), path(variant), path(ref)
         tuple val(sample_id), path(r1), path(r2)
 
     output:
-        tuple val(method), val(sample_id),
-                path(variant), path(depths), emit: 'annotation'
+        tuple val(sample_id), val(file_base), 
+              path(variant), emit: 'annotation'
         file ".command.log"
     
     script:
-        outdir = "${params.outdir}/variant/snippy/$method"
-        prefix = "${sample_id}"
+        outdir = "${params.outdir}/variant/snippy"
+        prefix = "${file_base}"
+        logfile = "${file_base}.log"
         travis = (params.travis == true) ? '--ram 4' : ''
         
     """
@@ -45,25 +46,25 @@ process SNIPPY {
 process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/consensus/${params.consensus}/$method",
+    publishDir "${params.outdir}/consensus/${params.consensus}",
                 pattern: "*.fa", mode: "copy"
-    publishDir "${params.outdir}/logs/${params.consensus}/$method",
+    publishDir "${params.outdir}/logs/${params.consensus}",
                 pattern: ".command.log", 
                 mode: "copy",
-                saveAs: { file -> "bcftools_consensus_${sample_id}.log" }
+                saveAs: { file -> "${logfile}" }
     
     input:
         file ref
-        tuple val(method), val(sample_id),
-                path(variant), path(depths)
+        tuple val(sample_id), val(file_base), path(variant)
 
     output:
-        file "${sample_id}_bcftools_consensus.fa"
+        file "${consensus}"
         file ".command.log"
 
     script:
         zipped = "${variant}.gz"
-        consensus = "${sample_id}_bcftools_consensus.fa"
+        consensus = "${file_base}_CONSENSUS.fa"
+        logfile = "${file_base}.log"
 
     """
     bgzip $variant;
@@ -78,24 +79,25 @@ process BCFTOOLS_CONSENSUS {
 process VCF_CONSENSUS {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/consensus/vcf/$method",
+    publishDir "${params.outdir}/consensus/vcf",
                 pattern: "*.fa", mode: "copy"
-    publishDir "${params.outdir}/logs/vcf/$method",
+    publishDir "${params.outdir}/logs/vcf",
                 pattern: ".command.log", 
                 mode: "copy",
-                saveAs: { file -> "vcf_consensus_${sample_id}.log" }
+                saveAs: { file -> "${logfile}" }
 
     input: 
         file ref 
-        tuple val(method), val(sample_id),
-                path(variant), path(depths) 
+        tuple val(sample_id), val(file_base), path(variant)
+        path depths 
 
     output: 
-        file "${sample_id}_vcf_consensus.fa"
+        file "${consensus}"
         file ".command.log"
 
     script:
-        consensus = "${sample_id}_vcf_consensus.fa"
+        consensus = "${file_base}_CONSENSUS.fa"
+        logfile = "{file_base}.log"
 
     """
     vcf_consensus_builder \\
@@ -129,6 +131,7 @@ workflow consensus {
 
     take:
         variants
+        depths
         reads
         ref
 
@@ -149,7 +152,7 @@ workflow consensus {
 
         } else {
 
-            VCF_CONSENSUS(ref, SNIPPY.out.annotation)
+            VCF_CONSENSUS(ref, SNIPPY.out.annotation, depths)
 
         }
 

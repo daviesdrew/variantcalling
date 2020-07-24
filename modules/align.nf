@@ -10,24 +10,27 @@
 process BWA {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/align/bwa",
+    publishDir "${params.outdir}/align",
                 pattern: "*.bam"
-    publishDir "${params.outdir}/logs/bwa",
+    publishDir "${params.outdir}/logs",
                 pattern: ".command.log", 
                 mode: "copy",
-                saveAs: { file -> "bwa_mem_${sample_id}.log" } 
-                
+                saveAs: { file -> "${logfile}" } 
+    
     input:
-        val ref
+        file ref
         tuple sample_id, path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val('bwa'), path(bam), emit: "align"
+        tuple val(sample_id), val(file_base), path(bam), emit: "align"
         file ".command.log"
 
     script:
-        align = "${sample_id}_bwa_align_pe.sam"
-        bam = "${sample_id}_bwa_align_pe.bam"
+        method = "BWA"
+        ref_base = "${ref.getBaseName()}"
+        file_base = "BWA_${sample_id}_TO_${ref_base}" 
+        bam = "${file_base}.bam"
+        logfile = "${file_base}.log" 
 
     """
     bwa index -a bwtsw $ref;
@@ -46,27 +49,31 @@ process BWA {
 process BOWTIE2 {
     tag "$sample_id"
 
-    publishDir "./index", pattern: "index*bt2*", mode: "copy"
-    publishDir "${params.outdir}/align/bowtie2",
+    publishDir "./index", pattern: "index*bt2*", 
+                mode: "copy"
+    publishDir "${params.outdir}/align",
                 pattern: "*.bam"
-    publishDir "${params.outdir}/logs/bowtie2",
+    publishDir "${params.outdir}/logs",
                 pattern: ".command.log", 
                 mode: "copy",
-                saveAs: { file -> "bowtie2_${sample_id}.log" } 
+                saveAs: { file -> "${logfile}" }
                
     input:
-        val ref
+        file ref
         tuple sample_id, path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val('bowtie2'), path(bam), emit: "align"
-        file "${sample_id}_bowtie2_align_pe.bam"
+        tuple val(sample_id), val(file_base), path(bam), emit: "align"
         file ".command.log"
 
     script:
         index_dir = "./index"
         indexes = "./index/index"
-        bam = "${sample_id}_bowtie2_align_pe.bam"
+        method = "BOWTIE2"
+        ref_base = "${ref.getBaseName()}"
+        file_base = "BOWTIE2_${sample_id}_TO_${ref_base}"
+        bam = "${file_base}.bam"
+        logfile = "${file_base}.log"
 
     """
     mkdir $index_dir
@@ -88,25 +95,27 @@ process BOWTIE2 {
 process MINIMAP2 {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/align/minimap2",
+    publishDir "${params.outdir}/align",
                 pattern: "*.bam"
-    publishDir "${params.outdir}/logs/minimap2",
+    publishDir "${params.outdir}/logs",
                 pattern: ".command.log", 
                 mode: "copy",
-                saveAs: { file -> "minimap2_${sample_id}.log" } 
+                saveAs: { file -> "${logfile}" }
 
     input:
-        val ref
+        file ref
         tuple sample_id, path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val('minimap2'), path(bam), emit: "align"
-        file "${sample_id}_minimap2_align_pe.bam"
+        tuple val(sample_id), val(file_base), path(bam), emit: "align"
         file ".command.log"
 
     script:
-        bam = "${sample_id}_minimap2_align_pe.bam"
-
+        method = 'MINIMAP2'
+        ref_base = "${ref.getBaseName()}"
+        file_base = "${method}_${sample_id}_TO_${ref_base}"
+        bam = "${file_base}.bam"
+        logfile = "${file_base}.log"
     """
     minimap2 -a -t ${task.cpus} \\
         -ax sr $ref $r1 $r2 \\
