@@ -9,20 +9,23 @@
 process BAMINDEX {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/align/$method", 
+    publishDir "${params.outdir}/align", 
                 pattern: "*.bai", mode: "copy"
     
     input:
-        tuple val(sample_id), val(method), path(align)
+        tuple val(sample_id), val(method), 
+              val(ref_base), path(align)
 
     output:
         tuple val(sample_id), val(method),
-                path(align), path(depths), emit: 'align'
-        file "${sample_id}_${params.align}_align_pe.bai"
+              path(align), path(depths), 
+              emit: 'align'
+        file "${indexed_bam}"
 
     script:
-        indexed_bam = "${sample_id}_${params.align}_align_pe.bai"
-        depths = "${sample_id}_depths.tsv"
+        file_base = "{method}_${sample_id}_TO_${ref_base}" 
+        indexed_bam = "${file_base}.bai"
+        depths = "${file_base}_DEPTHS.tsv"
 
     """
     samtools index $align $indexed_bam;

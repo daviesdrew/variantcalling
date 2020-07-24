@@ -121,7 +121,7 @@ include quality_check from "./modules/quality_check.nf"
 
 workflow {
     main:    
-        ref = Channel.fromPath(params.ref) 
+        ref = Channel.fromPath("${baseDir}/${params.ref}") 
         phix = Channel.value(file("${baseDir}/${params.phix}"))
         reads = Channel.fromFilePairs(params.reads,
                                       flat: true,
