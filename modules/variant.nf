@@ -13,17 +13,13 @@ process BAMINDEX {
                 pattern: "*.bai", mode: "copy"
     
     input:
-        tuple val(sample_id), val(method), 
-              val(ref_base), path(align)
+        tuple val(sample_id), val(file_base), path(align)
 
     output:
-        tuple val(sample_id), val(method),
-              path(align), path(depths), 
-              emit: 'align'
+        tuple val(sample_id), path(align), path(depths), emit: 'align'
         file "${indexed_bam}"
 
     script:
-        file_base = "{method}_${sample_id}_TO_${ref_base}" 
         indexed_bam = "${file_base}.bai"
         depths = "${file_base}_DEPTHS.tsv"
 
@@ -52,12 +48,12 @@ process FREEBAYES {
     
     input:
         file ref
-        tuple val(sample_id), val(method),
-                path(bam), path(depths)
+        tuple val(sample_id), path(bam), path(depths)
 
     output:
-        tuple val(sample_id), val(method),
-                path(variant), path(ref), path(depths), emit: 'variant'
+        tuple val(sample_id), path(variant), 
+              path(ref), path(depths), 
+              emit: 'variant'
         file ".command.log"
 
     script:
@@ -81,8 +77,7 @@ process BCFTOOLS_STATS {
     publishDir "${params.outdir}/variant/method",
                 pattern: "*_stats.txt", mode: "copy"
     input: 
-        tuple val(sample_id), val(method),
-                path(variant), path(ref), path(depths) 
+        tuple val(sample_id), path(variant), path(ref), path(depths) 
 
     output: 
         file "${sample_id}_stats.txt"
@@ -113,8 +108,7 @@ process BCFTOOLS_FILTER {
     echo true
     
     input: 
-        tuple val(sample_id), val(method),
-                path(variant), path(ref), path(depths) 
+        tuple val(sample_id), path(variant), path(ref), path(depths) 
 
     output: 
         tuple val(method), path(filtered), path(ref), path(depths),

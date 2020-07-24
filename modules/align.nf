@@ -22,9 +22,7 @@ process BWA {
         tuple sample_id, path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val(method), 
-              val(ref_base), path(bam), 
-              emit: "align"
+        tuple val(sample_id), val(file_base), path(bam), emit: "align"
         file ".command.log"
 
     script:
@@ -65,9 +63,7 @@ process BOWTIE2 {
         tuple sample_id, path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val(method), 
-              val(ref_base), path(bam), 
-              emit: "align"
+        tuple val(sample_id), val(file_base), path(bam), emit: "align"
         file ".command.log"
 
     script:
@@ -111,9 +107,7 @@ process MINIMAP2 {
         tuple sample_id, path(r1), path(r2)
 
     output:
-        tuple val(sample_id), val(method), 
-              val(ref_base), path(bam), 
-              emit: "align"
+        tuple val(sample_id), val(file_base), path(bam), emit: "align"
         file ".command.log"
 
     script:
