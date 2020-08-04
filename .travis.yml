@@ -16,12 +16,13 @@ install:
     - echo "Installing Singularity"
     - wget https://github.com/singularityware/singularity/releases/download/2.5.2/singularity-2.5.2.tar.gz
     - tar xvf singularity-2.5.2.tar.gz 
-    - cd singularity-2.5.2
     - ls -la
+    - cd singularity-2.5.2
     - ./configure --prefix=/usr/local
     - make
     - sudo make install
     - cd ..
+    - ls -la
         
 scripts:                
     - nextflow run main.nf -profile test,docker --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
