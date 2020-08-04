@@ -1,12 +1,9 @@
 name: variantcalling
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
-  - _libgcc_mutex=0.1=conda_forge
-  - _openmp_mutex=4.5=1_llvm
-  - any2fasta=0.4.2=2
   - bbmap=38.18=0
   - bcftools=1.10.2=hd2cd319_0
   - bedtools=2.29.2=hc088bd4_0
