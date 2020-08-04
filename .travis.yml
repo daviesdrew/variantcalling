@@ -16,7 +16,7 @@ install:
     - tar xvf singularity-2.5.2.tar.gz 
     - cd singularity-2.5.2
     - ls -la
-    - ./configure --prefix-/usr/local
+    - ./configure --prefix=/usr/local
     - make
     - sudo make install
         
