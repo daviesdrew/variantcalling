@@ -1,12 +1,12 @@
 //=============================================================================
 // WORKFLOW DEFINITION
 //=============================================================================
-include BWA from "./align.nf"
-include BOWTIE2 from "./align.nf"
-include MINIMAP2 from "./align.nf"
+include { BWA } from "./align.nf"
+include { BOWTIE2 } from "./align.nf"
+include { MINIMAP2 } from "./align.nf"
 
-include variants from "./variant.nf"
-include consensus from "./consensus.nf"
+include { variants } from "./variant.nf"
+include { consensus } from "./consensus.nf"
 
 //----------------------------------------
 // WORKFLOW: bwa

@@ -113,11 +113,11 @@ log.info "========================================="
 //=============================================================================
 // WORKFLOW DEFINITION 
 //=============================================================================
-include bwa from "./modules/pipes.nf"
-include bowtie2 from "./modules/pipes.nf"
-include minimap2 from "./modules/pipes.nf"
+include { bwa } from "./modules/pipes.nf"
+include { bowtie2 } from "./modules/pipes.nf"
+include { minimap2 } from "./modules/pipes.nf"
 
-include quality_check from "./modules/quality_check.nf"
+include { quality_check } from "./modules/quality_check.nf"
 
 workflow {
     main:    
