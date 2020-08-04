@@ -21,6 +21,7 @@ install:
     - ./configure --prefix=/usr/local
     - make
     - sudo make install
+    - cd ..
         
 scripts:                
     - nextflow run main.nf -profile test,docker --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
