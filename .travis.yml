@@ -8,6 +8,8 @@ services: docker
 on: [push, pull_request]
 
 install:
+    - sudo apt-get update -y
+    - sudo apt-get install -y libarchive-dev
     - echo "Installing Nextflow"
     - wget -qO- https://get.nextflow.io | bash
     - sudo mv nextflow /usr/local/bin
