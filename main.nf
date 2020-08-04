@@ -138,14 +138,14 @@ workflow {
                        //Convert specified files into tuples
                        .map{ [ it[0].replaceAll(/_S\d{1,2}_L001/,""), it[1], it[2] ] }
         
-        //quality_check(reads, phix)
+        quality_check(reads, phix)
         if(params.align == 'bowtie2' || params.align == 'all')
-            bowtie2(ref, reads)
+            bowtie2(ref, quality_check.out.reads)
 
         if(params.align == 'minimap2' || params.align == 'all')
-            minimap2(ref, reads) 
+            minimap2(ref, quality_check.out.reads) 
         
         if(params.align == 'bwa' || params.align == 'all')
-            bwa(ref, reads)
+            bwa(ref, quality_check.out.reads)
 
 }
