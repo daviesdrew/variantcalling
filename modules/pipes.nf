@@ -34,7 +34,7 @@ workflow bwa {
         consensus(variants.out.variant,
                   variants.out.depths, 
                   reads, ref)    
-        bcf_plot(consensus.out.bcftools)
+        bcf_plot(consensus.out.bcf)
         vcf_plot(consensus.out.vcf)
 
 }        
@@ -65,7 +65,8 @@ workflow bowtie2 {
         consensus(variants.out.variant,
                   variants.out.depths, 
                   reads, ref)
-        plot(consensus.out.consensus)
+        bcf_plot(consensus.out.bcf)
+        vcf_plot(consensus.out.vcf)
 }
 //----------------------------------------
 
@@ -95,6 +96,8 @@ workflow minimap2 {
                   variants.out.depths,
                   reads, ref)
         plot(consensus.out.consensus)
+        bcf_plot(consensus.out.bcf)
+        vcf_plot(consensus.out.vcf)
 }
 //----------------------------------------
 

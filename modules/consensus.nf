@@ -180,6 +180,6 @@ workflow consensus {
 
     emit:
         vcf = build_consensus.out.vcf
-        bcftools = build_consensus.out.bcftools
+        bcf = build_consensus.out.bcftools
 }
 //----------------------------------------
