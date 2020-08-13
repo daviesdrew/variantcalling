@@ -46,9 +46,9 @@ process SNIPPY {
 process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/consensus/${params.consensus}",
+    publishDir "${params.outdir}/consensus/bcf",
                 pattern: "*.fa", mode: "copy"
-    publishDir "${params.outdir}/logs/${params.consensus}",
+    publishDir "${params.outdir}/logs/bcf",
                 pattern: ".command.log", 
                 mode: "copy",
                 saveAs: { file -> "${logfile}" }
@@ -58,18 +58,23 @@ process BCFTOOLS_CONSENSUS {
         tuple val(sample_id), val(file_base), path(variant)
 
     output:
+        tuple val(sample_id), val(file_base), 
+              path(variant), emit: 'consensus'
         file "${consensus}"
         file ".command.log"
 
     script:
+        temp = "temp.vcf"
         zipped = "${variant}.gz"
         consensus = "${file_base}_CONSENSUS.fa"
         logfile = "${file_base}.log"
 
     """
+    cp $variant $temp;
     bgzip $variant;
     tabix -p vcf $zipped;
     bcftools consensus -f $ref $zipped > $consensus;
+    cp $temp $variant;
     """
 }
 //----------------------------------------
@@ -138,20 +143,12 @@ workflow build_consensus {
         depths
 
     main:
-        bcftools = false
-        if (params.consensus == 'bcftools') {
-            bcftools = true
-            BCFTOOLS_CONSENSUS(ref, annotation)
-        
-        } else {
-        
-            VCF_CONSENSUS(ref, annotation, depths)
-        }
+        BCFTOOLS_CONSENSUS(ref, annotation)
+        VCF_CONSENSUS(ref, annotation, depths)
     
     emit:
-        consensus =  (bcftools)
-                     ? BCFTOOLS_CONSENSUS.out.consensus 
-                     : VCF_CONSENSUS.out.consensus
+        vcf =  VCF_CONSENSUS.out.consensus 
+        bcftools = BCFTOOLS_CONSENSUS.out.consensus
 }
 //----------------------------------------
 
@@ -182,6 +179,7 @@ workflow consensus {
         build_consensus(ref, SNIPPY.out.annotation, depths)
 
     emit:
-        consensus = build_consensus.out.consensus
+        vcf = build_consensus.out.vcf
+        bcftools = build_consensus.out.bcftools
 }
 //----------------------------------------
