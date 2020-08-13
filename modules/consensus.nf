@@ -92,6 +92,8 @@ process VCF_CONSENSUS {
         path depths 
 
     output: 
+        tuple val(sample_id), val(file_base), 
+              path(variant), emit: 'consensus'
         file "${consensus}"
         file ".command.log"
 
@@ -115,6 +117,45 @@ process VCF_CONSENSUS {
 //=============================================================================
 
 //----------------------------------------
+// WORKFLOW: build_consensus
+// 
+// Takes:
+//      ref = reference genome
+//      annotation = annotated variant calls
+//      depths = depths of reads
+//
+// Main: 
+//      1. Build Consensus
+//
+// Emit:
+//      consensus = consensus sequence
+//
+//----------------------------------------
+workflow build_consensus {
+    take:
+        ref
+        annotation
+        depths
+
+    main:
+        bcftools = false
+        if (params.consensus == 'bcftools') {
+            bcftools = true
+            BCFTOOLS_CONSENSUS(ref, annotation)
+        
+        } else {
+        
+            VCF_CONSENSUS(ref, annotation, depths)
+        }
+    
+    emit:
+        consensus =  (bcftools)
+                     ? BCFTOOLS_CONSENSUS.out.consensus 
+                     : VCF_CONSENSUS.out.consensus
+}
+//----------------------------------------
+
+//----------------------------------------
 // WORKFLOW: consensus
 // 
 // Takes:
@@ -124,7 +165,7 @@ process VCF_CONSENSUS {
 //
 // Main: 
 //      1. Annotation && effect prediction 
-//      2. Consensus
+//      2. Build consensus
 //
 //----------------------------------------
 workflow consensus {
@@ -136,26 +177,11 @@ workflow consensus {
         ref
 
     main:
-        if (params.prediction == 'different annotation/prediction tool') {
 
-            SNIPPY(variants, reads)
+        SNIPPY(variants, reads) 
+        build_consensus(ref, SNIPPY.out.annotation, depths)
 
-        } else {
-
-            SNIPPY(variants, reads)
-
-        }
-
-        if (params.consensus == 'bcftools') {
-
-            BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
-
-        } else {
-
-            VCF_CONSENSUS(ref, SNIPPY.out.annotation, depths)
-
-        }
-
+    emit:
+        consensus = build_consensus.out.consensus
 }
 //----------------------------------------
-
