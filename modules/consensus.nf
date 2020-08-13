@@ -46,9 +46,9 @@ process SNIPPY {
 process BCFTOOLS_CONSENSUS {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/consensus/${params.consensus}",
+    publishDir "${params.outdir}/consensus/bcf",
                 pattern: "*.fa", mode: "copy"
-    publishDir "${params.outdir}/logs/${params.consensus}",
+    publishDir "${params.outdir}/logs/bcf",
                 pattern: ".command.log", 
                 mode: "copy",
                 saveAs: { file -> "${logfile}" }
@@ -58,18 +58,23 @@ process BCFTOOLS_CONSENSUS {
         tuple val(sample_id), val(file_base), path(variant)
 
     output:
+        tuple val(sample_id), val(file_base), 
+              path(variant), emit: 'consensus'
         file "${consensus}"
         file ".command.log"
 
     script:
+        temp = "temp.vcf"
         zipped = "${variant}.gz"
         consensus = "${file_base}_CONSENSUS.fa"
         logfile = "${file_base}.log"
 
     """
+    cp $variant $temp;
     bgzip $variant;
     tabix -p vcf $zipped;
     bcftools consensus -f $ref $zipped > $consensus;
+    cp $temp $variant;
     """
 }
 //----------------------------------------
@@ -92,6 +97,8 @@ process VCF_CONSENSUS {
         path depths 
 
     output: 
+        tuple val(sample_id), val(file_base), 
+              path(variant), emit: 'consensus'
         file "${consensus}"
         file ".command.log"
 
@@ -115,6 +122,37 @@ process VCF_CONSENSUS {
 //=============================================================================
 
 //----------------------------------------
+// WORKFLOW: build_consensus
+// 
+// Takes:
+//      ref = reference genome
+//      annotation = annotated variant calls
+//      depths = depths of reads
+//
+// Main: 
+//      1. Build Consensus
+//
+// Emit:
+//      consensus = consensus sequence
+//
+//----------------------------------------
+workflow build_consensus {
+    take:
+        ref
+        annotation
+        depths
+
+    main:
+        BCFTOOLS_CONSENSUS(ref, annotation)
+        VCF_CONSENSUS(ref, annotation, depths)
+    
+    emit:
+        vcf =  VCF_CONSENSUS.out.consensus 
+        bcftools = BCFTOOLS_CONSENSUS.out.consensus
+}
+//----------------------------------------
+
+//----------------------------------------
 // WORKFLOW: consensus
 // 
 // Takes:
@@ -124,7 +162,7 @@ process VCF_CONSENSUS {
 //
 // Main: 
 //      1. Annotation && effect prediction 
-//      2. Consensus
+//      2. Build consensus
 //
 //----------------------------------------
 workflow consensus {
@@ -136,26 +174,12 @@ workflow consensus {
         ref
 
     main:
-        if (params.prediction == 'different annotation/prediction tool') {
 
-            SNIPPY(variants, reads)
+        SNIPPY(variants, reads) 
+        build_consensus(ref, SNIPPY.out.annotation, depths)
 
-        } else {
-
-            SNIPPY(variants, reads)
-
-        }
-
-        if (params.consensus == 'bcftools') {
-
-            BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
-
-        } else {
-
-            VCF_CONSENSUS(ref, SNIPPY.out.annotation, depths)
-
-        }
-
+    emit:
+        vcf = build_consensus.out.vcf
+        bcftools = build_consensus.out.bcftools
 }
 //----------------------------------------
-

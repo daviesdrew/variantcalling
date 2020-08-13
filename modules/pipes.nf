@@ -4,9 +4,10 @@
 include { BWA } from "./align.nf"
 include { BOWTIE2 } from "./align.nf"
 include { MINIMAP2 } from "./align.nf"
-
 include { variants } from "./variant.nf"
 include { consensus } from "./consensus.nf"
+include { bcf_plot } from "./plot.nf"
+include { vcf_plot } from "./plot.nf"
 
 //----------------------------------------
 // WORKFLOW: bwa
@@ -32,8 +33,11 @@ workflow bwa {
         variants(ref, BWA.out.align)
         consensus(variants.out.variant,
                   variants.out.depths, 
-                  reads, ref)
-}
+                  reads, ref)    
+        bcf_plot(consensus.out.bcftools)
+        vcf_plot(consensus.out.vcf)
+
+}        
 //----------------------------------------
 
 //----------------------------------------
@@ -61,6 +65,7 @@ workflow bowtie2 {
         consensus(variants.out.variant,
                   variants.out.depths, 
                   reads, ref)
+        plot(consensus.out.consensus)
 }
 //----------------------------------------
 
@@ -89,6 +94,7 @@ workflow minimap2 {
         consensus(variants.out.variant,
                   variants.out.depths,
                   reads, ref)
+        plot(consensus.out.consensus)
 }
 //----------------------------------------
 

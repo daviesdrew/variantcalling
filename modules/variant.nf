@@ -156,28 +156,9 @@ workflow variants {
 
     main:
         BAMINDEX(align)
-
-        if (params.variant == 'other variant calling tool') {
-
-            FREEBAYES(ref, BAMINDEX.out.align)
-
-        } else {
-
-            FREEBAYES(ref, BAMINDEX.out.align)
-
-        }
-
+        FREEBAYES(ref, BAMINDEX.out.align)
         BCFTOOLS_STATS(FREEBAYES.out.variant)
-
-        if (params.filter == 'other filtering tool') {
-
-            BCFTOOLS_FILTER(FREEBAYES.out.variant)
-
-        } else {
-
-            BCFTOOLS_FILTER(FREEBAYES.out.variant)
-
-        }
+        BCFTOOLS_FILTER(FREEBAYES.out.variant)
 
     emit: 
         depths = BAMINDEX.out.depths
