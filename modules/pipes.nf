@@ -4,7 +4,7 @@
 include { BWA } from "./align.nf"
 include { BOWTIE2 } from "./align.nf"
 include { MINIMAP2 } from "./align.nf"
-include { BOKEH_PLOT } from "./plot.nf"
+include { plot } from "./plot.nf"
 
 include { variants } from "./variant.nf"
 include { consensus } from "./consensus.nf"
@@ -34,7 +34,7 @@ workflow bwa {
         consensus(variants.out.variant,
                   variants.out.depths, 
                   reads, ref)    
-        BOKEH_PLOT(consensus.out.consensus)
+        plot(consensus.out.consensus)
 }        
 //----------------------------------------
 
@@ -63,7 +63,7 @@ workflow bowtie2 {
         consensus(variants.out.variant,
                   variants.out.depths, 
                   reads, ref)
-        BOKEH_PLOT(consensus.out.consensus)
+        plot(consensus.out.consensus)
 }
 //----------------------------------------
 
@@ -92,7 +92,7 @@ workflow minimap2 {
         consensus(variants.out.variant,
                   variants.out.depths,
                   reads, ref)
-        BOKEH_PLOT(consensus.out.consensus)
+        plot(consensus.out.consensus)
 }
 //----------------------------------------
 
