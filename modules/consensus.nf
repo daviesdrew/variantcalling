@@ -122,37 +122,6 @@ process VCF_CONSENSUS {
 //=============================================================================
 
 //----------------------------------------
-// WORKFLOW: build_consensus
-// 
-// Takes:
-//      ref = reference genome
-//      annotation = annotated variant calls
-//      depths = depths of reads
-//
-// Main: 
-//      1. Build Consensus
-//
-// Emit:
-//      consensus = consensus sequence
-//
-//----------------------------------------
-workflow build_consensus {
-    take:
-        ref
-        annotation
-        depths
-
-    main:
-        BCFTOOLS_CONSENSUS(ref, annotation)
-        VCF_CONSENSUS(ref, annotation, depths)
-    
-    emit:
-        vcf =  VCF_CONSENSUS.out.consensus 
-        bcftools = BCFTOOLS_CONSENSUS.out.consensus
-}
-//----------------------------------------
-
-//----------------------------------------
 // WORKFLOW: consensus
 // 
 // Takes:
@@ -176,10 +145,11 @@ workflow consensus {
     main:
 
         SNIPPY(variants, reads) 
-        build_consensus(ref, SNIPPY.out.annotation, depths)
-
+        BCFTOOLS_CONSENSUS(ref, SNIPPY.out.annotation)
+        VCF_CONSENSUS(ref, SNIPPY.out.annotation, depths)
+    
     emit:
-        vcf = build_consensus.out.vcf
-        bcf = build_consensus.out.bcftools
+        vcf = VCF_CONSENSUS.out.consensus
+        bcf = BCFTOOLS_CONSENSUS.out.consensus
 }
 //----------------------------------------
