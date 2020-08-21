@@ -13,27 +13,31 @@ branches:
 
 on: [push, pull_request]
 jobs:
-    before_install:
-        - sudo apt-get update -y
-        - sudo apt-get install -y libarchive-dev
-
-    install:
-        - echo "Installing Nextflow"
-        - wget -qO- https://get.nextflow.io | bash
-        - sudo mv nextflow /usr/local/bin
+    - stage: docker
+        before_install:
+            - sudo apt-get update -y
+        install:
+            - echo "Installing Nextflow"
+            - wget -qO- https://get.nextflow.io | bash
+            - sudo mv nextflow /usr/local/bin
+        script:
+            - nextflow run main.nf -profile test,docker --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
     
-        - echo "Installing Singularity"
-        - wget https://github.com/singularityware/singularity/releases/download/2.5.2/singularity-2.5.2.tar.gz
-        - tar xvf singularity-2.5.2.tar.gz 
-        - cd singularity-2.5.2
-        - ./configure --prefix=/usr/local
-        - make
-        - sudo make install
-        - cd ..
+    - stage: singularity
+        before_install: 
+            - sudo apt-get install -y libarchive-dev
+        install:
+            - echo "Installing Singularity"
+            - wget https://github.com/singularityware/singularity/releases/download/2.5.2/singularity-2.5.2.tar.gz
+            - tar xvf singularity-2.5.2.tar.gz 
+            - cd singularity-2.5.2
+            - ./configure --prefix=/usr/local
+            - make
+            - sudo make install
+            - cd ..
         
-    script:                
-        - nextflow run main.nf -profile test,docker --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
-        - singularity
+        script:                
+            - singularity
     #- nextflow run main.nf -profile test,singularity --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
 
 after_success:
