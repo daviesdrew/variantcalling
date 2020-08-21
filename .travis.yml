@@ -14,15 +14,16 @@ branches:
         master
 
 jobs:
+    before_install:
+        - sudo apt-get update -y
+    install:
+        - echo "Installing Nextflow"
+        - wget -qO- https://get.nextflow.io | bash
+        - sudo mv nextflow /usr/local/bin
+    
     include:
         - stage: docker
           name: docker_test
-          before_install:
-            - sudo apt-get update -y
-          install:
-            - echo "Installing Nextflow"
-            - wget -qO- https://get.nextflow.io | bash
-            - sudo mv nextflow /usr/local/bin
           script:
             - nextflow run main.nf -profile test,docker --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
     
