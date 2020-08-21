@@ -43,9 +43,7 @@ jobs:
             - sudo make install
             - cd ..
           script:                
-            - singularity
-            - nextflow
-    #- nextflow run main.nf -profile test,singularity --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
+            - nextflow run main.nf -profile test,singularity --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
 
 after_success:
     - echo "CI build of variantcalling pipeline succeeded"
