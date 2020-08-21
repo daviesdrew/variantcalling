@@ -13,27 +13,24 @@ branches:
     except:
         master
 
-stages:
-    - name: docker
-      if branch = dev
-    - name: singularity
-      if branch = dev  
-
 jobs:
-    - stage: docker
-        before_install:
+    include:
+        - stage: docker
+          name: docker_test
+          before_install:
             - sudo apt-get update -y
-        install:
+          install:
             - echo "Installing Nextflow"
             - wget -qO- https://get.nextflow.io | bash
             - sudo mv nextflow /usr/local/bin
-        script:
+          script:
             - nextflow run main.nf -profile test,docker --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
     
-    - stage: singularity
-        before_install: 
+        - stage: singularity
+          name: singularity_test
+          before_install: 
             - sudo apt-get install -y libarchive-dev
-        install:
+          install:
             - echo "Installing Singularity"
             - wget https://github.com/singularityware/singularity/releases/download/2.5.2/singularity-2.5.2.tar.gz
             - tar xvf singularity-2.5.2.tar.gz 
@@ -42,8 +39,7 @@ jobs:
             - make
             - sudo make install
             - cd ..
-        
-        script:                
+          script:                
             - singularity
     #- nextflow run main.nf -profile test,singularity --fastp_min_base_quality 15 --fastp_max_percent_low_qual_base 40 --travis 'true'
 
