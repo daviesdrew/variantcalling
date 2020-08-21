@@ -30,6 +30,7 @@ jobs:
           name: singularity_test
           before_install: 
             - sudo apt-get install -y libarchive-dev
+            - sudo apt-get update && apt-get install procps -y
           install:
             - echo "Installing Nextflow"
             - wget -qO- https://get.nextflow.io | bash
