@@ -29,8 +29,9 @@ jobs:
         - stage: singularity
           name: singularity_test
           before_install: 
+            - sudo apt-get update 
             - sudo apt-get install -y libarchive-dev
-            - sudo apt-get update && apt-get install procps -y
+            - sudo apt-get install -y procps
           install:
             - echo "Installing Nextflow"
             - wget -qO- https://get.nextflow.io | bash
