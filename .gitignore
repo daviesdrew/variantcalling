@@ -10,7 +10,7 @@ testing/
 *.log.*
 *.simg
 results/*
-scripts/results/*
-scripts/results*
-scripts/work/*
-scripts/work
+scripts/*
+pers/*
+ref.fa.*
+*.sif
