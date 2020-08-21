@@ -21,5 +21,3 @@ From: continuumio/miniconda3:4.8.2
     conda env create -f /environment.yml
     conda clean -a
     echo $PATH
-    ls $PATH
-    ls -la $PATH
